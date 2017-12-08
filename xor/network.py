@@ -30,8 +30,8 @@ output_bias = [-0.32433593]
 # compute forward propagation
 
 #
-input_activation = [[ 1 ], [ 0 ]]
-#input_activation = [[ 0 ], [ 1 ]]
+#input_activation = [[ 1 ], [ 0 ]]
+input_activation = [[ 0 ], [ 1 ]]
 # z[1] = W[1] x + B[1]
 #      = input_hidden_weights input_activation + hidden_bias
 # a[1] = g(z[1])
@@ -85,30 +85,67 @@ output_activation = numpy.array([ 1 ])
 # pick arbitrary nonzero c, A_eq = W[2], b_eq = (z[2] - B[2])
 
 # c minimize a1[0]
-c = numpy.array([ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 ])
+# note we could pick any c here
+c2 = numpy.array([ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ])
 
 A2_eq = W2
 b2_eq = (z2 - B2)[0]
 
-print("c", c)
+print("c2", c2)
 print("A2_eq", A2_eq)
 print("b2_eq", b2_eq)
 
-__a1 = scipy.optimize.linprog(c, A_eq=A2_eq, b_eq=b2_eq, bounds=( 0, 1 ))
+__a1 = scipy.optimize.linprog(c2, A_eq=A2_eq, b_eq=b2_eq, bounds=( 0, 1 ))
 
 print("__a1", __a1)
 
-xW2 = __a1.x[0] * W2[0][0] + __a1.x[1] * W2[0][1] + __a1.x[2] * W2[0][2] + __a1.x[3] * W2[0][3] + __a1.x[4] * W2[0][4] + __a1.x[5] * W2[0][5] + __a1.x[6] * W2[0][6] + __a1.x[7] * W2[0][7] + __a1.x[8] * W2[0][8] + __a1.x[9] * W2[0][9] + B2[0];
-print("x W2 = ", xW2)
+a1_ = __a1.x
+a1W2 = a1_[0] * W2[0][0] + a1_[1] * W2[0][1] + a1_[2] * W2[0][2] + a1_[3] * W2[0][3] + a1_[4] * W2[0][4] + a1_[5] * W2[0][5] + a1_[6] * W2[0][6] + a1_[7] * W2[0][7] + a1_[8] * W2[0][8] + a1_[9] * W2[0][9] + B2[0];
+print("a1 W2 = ", a1W2)
 print("**** does x W2 equal a2? ***")
-error = xW2 - a2[0][0]
+error = a1W2 - a2[0][0]
 print("error", error)
 
 # z[1] = g^-1(a[1]) = a[1]
 # W[1] x = z[1] - B[1]
-#      x = W[1]^-1 ( z[1] - B[1] )
 
-# find x by linear programming.  Given W[1], zb1 = z[1] - B[1].
+# find x by algebra
+# a[1][0] = x[0] W[1][0][0] + x[1] W[1][1][0]
+# a[1][1] = x[0] W[1][0][1] + x[1] W[1][1][1]
+
+# a10 = x0 w100 + x1 w110
+# x0 = (a10 - x1 w110) / w100
+
+# a11 = x0 w101 + x1 w111
+#    = w101 (a10 - x1 w110) / w100 + x1 w111
+#    = (w101 / w100) (a10 - x1 w110) + x1 w111
+#    = k1 a10 - k1 x1 w110 + x1 w111
+#    = k1 a10 + x1 (w111 - k1 w110)
+# (a11 - k1 a10) / (w111 - k1 w110) = x1
+
+j0 = 0
+j1 = 1
+k1 = W1[0][j1] / W1[0][j0]
+z1B1 = z1 - B1
+x1_ = (z1B1[0][j1] - k1 * z1B1[0][j0]) / (W1[1][j1] - k1 * W1[1][j0])
+x0_ = (z1B1[0][j0] - x1_ * W1[1][j0]) / W1[0][j0]
+x_ = numpy.array([ [x0_], [x1_] ])
+
+print("Does x(input) equal x_(reconstructed input)???")
+print("x_", x_)
+print("x", x)
+
+error = x - x_
+print("error", error)
+
+
+
+
+
+
+
+
+
 
 
 

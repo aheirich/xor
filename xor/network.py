@@ -27,54 +27,76 @@ hidden_output_weights = [[ 0.4027527 ,
 
 output_bias = [-0.32433593]
 
+VERBOSE = False
+
 # compute forward propagation
 
+def forward_activation(input_activation):
 #
 #input_activation = [[ 1 ], [ 0 ]]
-input_activation = [[ 0 ], [ 1 ]]
+#input_activation = [[ 0 ], [ 1 ]]
 # z[1] = W[1] x + B[1]
 #      = input_hidden_weights input_activation + hidden_bias
 # a[1] = g(z[1])
 
-W1 = numpy.array(input_hidden_weights)
-B1 = numpy.array(hidden_bias)
-x = numpy.array(input_activation)
+  W1 = numpy.array(input_hidden_weights)
+  B1 = numpy.array(hidden_bias)
+  x = numpy.array(input_activation)
 
-z1_ = numpy.matmul(numpy.transpose(x), W1)
-z1 = z1_ + B1
-a1 = numpy.maximum(z1, 0) # relu
+  z1_ = numpy.matmul(numpy.transpose(x), W1)
+  z1 = z1_ + B1
+  a1 = numpy.maximum(z1, 0) # relu
 
-print("W1", W1)
-print("B1", B1)
-print("x", x)
-print("z1_", z1_)
-print("z1", z1)
-print("a1", a1)
+  if VERBOSE:
+    print("W1", W1)
+    print("B1", B1)
+    print("x", x)
+    print("z1_", z1_)
+    print("z1", z1)
+  print("a1", a1)
 
 # z[2] = W[2] a[1] + B[2]
 #      = hidden_output_weights a1 + output_bias
 # a[2] = g(z[2])
 
-W2 = numpy.array(hidden_output_weights)
-B2 = numpy.array(output_bias)
+  W2 = numpy.array(hidden_output_weights)
+  B2 = numpy.array(output_bias)
 
-z2_ = numpy.matmul(W2, numpy.transpose(a1))
-z2 = z2_ + B2
-a2 = numpy.maximum(z2, 0)
+  z2_ = numpy.matmul(W2, numpy.transpose(a1))
+  z2 = z2_ + B2
+  a2 = numpy.maximum(z2, 0)
 
-print("W2", W2)
-print("B2", B2)
+  if VERBOSE:
+    print("W2", W2)
+    print("B2", B2)
 
-print("z2_", z2_)
-print("z2", z2)
-print("a2", a2)
-print("")
-print("xor(", x, ") = ", a2)
-print("")
+    print("z2_", z2_)
+    print("z2", z2)
+  print("a2", a2)
+  print("")
+  print("**** xor(", x, ") = ", a2)
+  print("")
+  return a2
+
+
+
+
+
+
+def terse_callback(xk, **kwargs):
+  print("xk", xk)
+  print("kwargs nit", kwargs['nit'])
+
+
+
+
+
 
 # compute backward receptive field
 
-output_activation = numpy.array([ 1 ])
+def backward_activation(a2):
+  output_activation = numpy.array(a2)
+  z2 = output_activation
 
 # a[2] = output_activation
 # z[2] = g^-1(a[2]) = a[2]
@@ -86,25 +108,35 @@ output_activation = numpy.array([ 1 ])
 
 # c minimize a1[0]
 # note we could pick any c here
-c2 = numpy.array([ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ])
+  #c2 = numpy.array([ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ])
+  c2 = numpy.array([ 0, 1, 0, 0, 1, 0, 0, 0, 0, 0 ])
 
-A2_eq = W2
-b2_eq = (z2 - B2)[0]
+  W2 = numpy.array(hidden_output_weights)
+  B2 = numpy.array(output_bias)
 
-print("c2", c2)
-print("A2_eq", A2_eq)
-print("b2_eq", b2_eq)
+  A2_eq = W2
+  b2_eq = (z2 - B2)[0]
 
-__a1 = scipy.optimize.linprog(c2, A_eq=A2_eq, b_eq=b2_eq, bounds=( 0, 1 ))
+  if VERBOSE:
+    print("c2", c2)
+    print("A2_eq", A2_eq)
+    print("b2_eq", b2_eq)
 
-print("__a1", __a1)
+  options = dict([('maxiter', 10), ('disp', True)])
+  __a1 = scipy.optimize.linprog(c2, A_eq=A2_eq, b_eq=b2_eq, bounds=( 0, 1 ), options=options)
+  print("success == ", __a1.success)
+  print("x == __a1.x ==", __a1.x)
 
-a1_ = __a1.x
-a1W2 = a1_[0] * W2[0][0] + a1_[1] * W2[0][1] + a1_[2] * W2[0][2] + a1_[3] * W2[0][3] + a1_[4] * W2[0][4] + a1_[5] * W2[0][5] + a1_[6] * W2[0][6] + a1_[7] * W2[0][7] + a1_[8] * W2[0][8] + a1_[9] * W2[0][9] + B2[0];
-print("a1 W2 = ", a1W2)
-print("**** does x W2 equal a2? ***")
-error = a1W2 - a2[0][0]
-print("error", error)
+  a1_ = __a1.x
+  a1W2 = a1_[0] * W2[0][0] + a1_[1] * W2[0][1] + a1_[2] * W2[0][2] + a1_[3] * W2[0][3] + a1_[4] * W2[0][4] + a1_[5] * W2[0][5] + a1_[6] * W2[0][6] + a1_[7] * W2[0][7] + a1_[8] * W2[0][8] + a1_[9] * W2[0][9] + B2[0];
+
+  if VERBOSE:
+    print("a1 W2 = ", a1W2)
+    print("**** does x W2 equal a2? ***")
+    error = a1W2 - a2[0][0]
+    print("error", error)
+
+  z1 = [a1_]
 
 # z[1] = g^-1(a[1]) = a[1]
 # W[1] x = z[1] - B[1]
@@ -123,24 +155,39 @@ print("error", error)
 #    = k1 a10 + x1 (w111 - k1 w110)
 # (a11 - k1 a10) / (w111 - k1 w110) = x1
 
-j0 = 0
-j1 = 1
-k1 = W1[0][j1] / W1[0][j0]
-z1B1 = z1 - B1
-x1_ = (z1B1[0][j1] - k1 * z1B1[0][j0]) / (W1[1][j1] - k1 * W1[1][j0])
-x0_ = (z1B1[0][j0] - x1_ * W1[1][j0]) / W1[0][j0]
-x_ = numpy.array([ [x0_], [x1_] ])
+  W1 = numpy.array(input_hidden_weights)
+  B1 = numpy.array(hidden_bias)
 
-print("Does x(input) equal x_(reconstructed input)???")
-print("x_", x_)
-print("x", x)
-
-error = x - x_
-print("error", error)
+  j0 = 0
+  j1 = 1
+  k1 = W1[0][j1] / W1[0][j0]
+  z1B1 = z1 - B1
+  x1_ = (z1B1[0][j1] - k1 * z1B1[0][j0]) / (W1[1][j1] - k1 * W1[1][j0])
+  x0_ = (z1B1[0][j0] - x1_ * W1[1][j0]) / W1[0][j0]
+  x_ = numpy.array([ [x0_], [x1_] ])
+  return x_
 
 
+# there are two cases: fan-in, or fan-out, traversing from input to output.
+# fan-out: when tracing backwards there are more constraints than unknowns.
+# solve the problem algebraically.
+# fan-in: there are more unknowns than constraints.  use linear programming
+# with equality constraints to get a feasible solution.  apply systematic
+# perturbations in the vicinity of this solution to sample other solutions.
+# use the weights to find perturbations that add zero to the dot product.
 
+cases = [ [[0], [0]], [[0], [1]], [[1], [0]], [[1], [1]] ]
 
+for case in cases:
+  print("")
+  print("**** case ", case, " ****")
+  print("")
+  a2 = forward_activation(case)
+  print("**** a2", a2)
+  x = backward_activation(a2)
+  print("")
+  print("**** forward a2", a2)
+  print("**** backward x", x)
 
 
 

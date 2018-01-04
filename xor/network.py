@@ -2,8 +2,10 @@
 # xor network with 10 relu units in the hidden layer
 #
 
+import math
 import numpy
-import scipy.optimize
+from scipy import optimize
+
 
 input_hidden_weights = [[-0.38688731,  0.26221564, -0.63275653, -0.63185972,  0.56936806,  0.66896194,
                          0.49006391,  0.44972926, -0.49830455,  0.5427345 ],
@@ -27,7 +29,12 @@ hidden_output_weights = [[ 0.4027527 ,
 
 output_bias = [-0.32433593]
 
-VERBOSE = False
+print("input_hidden_weights", input_hidden_weights)
+print("hidden_bias", hidden_bias)
+print("hidden_output_weights", hidden_output_weights)
+print("output_bias", output_bias)
+
+VERBOSE = True
 
 # compute forward propagation
 
@@ -46,6 +53,8 @@ def forward_activation(input_activation):
   z1_ = numpy.matmul(numpy.transpose(x), W1)
   z1 = z1_ + B1
   a1 = numpy.maximum(z1, 0) # relu
+
+  print("forward z1", z1)
 
   if VERBOSE:
     print("W1", W1)
@@ -85,16 +94,37 @@ def forward_activation(input_activation):
 
 def terse_callback(xk, **kwargs):
   print("xk", xk)
-  print("kwargs nit", kwargs['nit'])
+  #print("kwargs nit", kwargs['nit'])
 
 
+def ratio(x):
+  scale = 1000000
+  return str(int(x * scale)) + "/" + str(scale)
 
+
+def write_lrs_file(case, A, b):
+  casename = "xor_" + str(case[0][0]) + "_" + str(case[1][0])
+  file = open(casename + ".ine", "w")
+  file.write(casename + "\n")
+  file.write("H-representation\n")
+  file.write("linearity " + str(len(b)))
+  for i in range(len(b)):
+    file.write(" " + str(i + 1))
+  file.write("\n")
+  file.write("begin\n")
+  file.write("1 " + str(len(A[0]) + 1) + " rational\n")
+  file.write(str(ratio(-b[0])))
+  for i in range(len(A[0])):
+    file.write(" " + str(ratio(A[0][i])))
+  file.write("\n")
+  file.write("end\n")
+  file.close()
 
 
 
 # compute backward receptive field
 
-def backward_activation(a2):
+def backward_activation(case, a2):
   output_activation = numpy.array(a2)
   z2 = output_activation
 
@@ -118,25 +148,44 @@ def backward_activation(a2):
   b2_eq = (z2 - B2)[0]
 
   if VERBOSE:
+    print("z2", z2)
+    print("B2", B2)
     print("c2", c2)
     print("A2_eq", A2_eq)
     print("b2_eq", b2_eq)
 
-  options = dict([('maxiter', 10), ('disp', True)])
-  __a1 = scipy.optimize.linprog(c2, A_eq=A2_eq, b_eq=b2_eq, bounds=( 0, 1 ), options=options)
-  print("success == ", __a1.success)
-  print("x == __a1.x ==", __a1.x)
+  #write_lrs_file(case, A2_eq, b2_eq)
+  #options = dict([('maxiter', 10), ('disp', True)])
+  #__a1 = optimize.linprog(c2, A_eq=A2_eq, b_eq=b2_eq, bounds=( 0, 1 ), options=options)
+  #print("success == ", __a1.success)
+  #print("x == __a1.x ==", __a1.x)
 
-  a1_ = __a1.x
-  a1W2 = a1_[0] * W2[0][0] + a1_[1] * W2[0][1] + a1_[2] * W2[0][2] + a1_[3] * W2[0][3] + a1_[4] * W2[0][4] + a1_[5] * W2[0][5] + a1_[6] * W2[0][6] + a1_[7] * W2[0][7] + a1_[8] * W2[0][8] + a1_[9] * W2[0][9] + B2[0];
+  #a1_ = __a1.x
 
-  if VERBOSE:
-    print("a1 W2 = ", a1W2)
-    print("**** does x W2 equal a2? ***")
-    error = a1W2 - a2[0][0]
-    print("error", error)
 
-  z1 = [a1_]
+  # need to sample all possible values of underdetermined system of linear equations
+  # one equation in ten unknowns
+  # bound the max value of each unknown
+  # then sample monte carlo
+  # a 10-D space is a lot of samples, concentrate around the zero point in each axis that's where the nonlinearity occurs
+  # a. bounding the max values
+  # we know that W.a1 + b = 0 so W.a1 = -b
+  # extreme value of a1[i] is at W[i]a1[1] = -b or a1[1] = -b/W[i]
+  # so sample a1[i] from 0 through -b/W[i] using logarithmic spacing
+  # make this dynamic, select the range for a1[i] assuming all other a1[j] are fixed for j < i, this can reduce the range for a1[i] if a1[j] > 0
+  # sample in ten nested loops, each loop sets a range and chooses k sample points using log spacing
+
+
+
+#  a1W2 = a1_[0] * W2[0][0] + a1_[1] * W2[0][1] + a1_[2] * W2[0][2] + a1_[3] * W2[0][3] + a1_[4] * W2[0][4] + a1_[5] * W2[0][5] + a1_[6] * W2[0][6] + a1_[7] * W2[0][7] + a1_[8] * W2[0][8] + a1_[9] * W2[0][9] + B2[0];
+#
+#  if VERBOSE:
+#    print("a1 W2 = ", a1W2)
+#    print("**** does x W2 equal a2? ***")
+#    error = a1W2 - a2[0][0]
+#    print("error", error)
+#
+#  z1 = [a1_]
 
 # z[1] = g^-1(a[1]) = a[1]
 # W[1] x = z[1] - B[1]
@@ -155,17 +204,131 @@ def backward_activation(a2):
 #    = k1 a10 + x1 (w111 - k1 w110)
 # (a11 - k1 a10) / (w111 - k1 w110) = x1
 
-  W1 = numpy.array(input_hidden_weights)
-  B1 = numpy.array(hidden_bias)
+#  W1 = numpy.array(input_hidden_weights)
+#  B1 = numpy.array(hidden_bias)
+#
+#  j0 = 0
+#  j1 = 1
+#  k1 = W1[0][j1] / W1[0][j0]
+#  z1B1 = z1 - B1
+#  x1_ = (z1B1[0][j1] - k1 * z1B1[0][j0]) / (W1[1][j1] - k1 * W1[1][j0])
+#  x0_ = (z1B1[0][j0] - x1_ * W1[1][j0]) / W1[0][j0]
+#  x_ = numpy.array([ [x0_], [x1_] ])
+#  return x_
+  return [ [0], [0] ]
 
-  j0 = 0
-  j1 = 1
-  k1 = W1[0][j1] / W1[0][j0]
-  z1B1 = z1 - B1
-  x1_ = (z1B1[0][j1] - k1 * z1B1[0][j0]) / (W1[1][j1] - k1 * W1[1][j0])
-  x0_ = (z1B1[0][j0] - x1_ * W1[1][j0]) / W1[0][j0]
-  x_ = numpy.array([ [x0_], [x1_] ])
-  return x_
+
+def extremum(partialSum, w, b, z2):
+  # w.a1 + b + partialSum = z2
+  # w.a1 = z2 - partialSum - b
+  # a1 = (z2 - partialSum - b) / w
+  result = (z2 - b - partialSum) / w
+  return result
+
+
+def samples(maxRange):
+  return [ 0, maxRange * 0.02, maxRange ]
+
+def maxZ2(W2):
+  sumWeights = 0
+  for w in W2:
+    sumWeights = sumWeights + w[0]
+  maxActivation = 3
+  return maxActivation * sumWeights
+
+def makeSamples(z2, W2):
+  if z2 > 0:
+    return [z2]
+  result = []
+  endpoint = maxZ2(W2)
+  numSamples = 11
+  for i in range(numSamples):
+    result.append(i * -endpoint / (numSamples - 1))
+  return result
+
+def backward_sampling(a2):
+
+  W2 = numpy.array(hidden_output_weights)
+  B2 = numpy.array(output_bias)
+  z2 = a2
+  z2Samples = makeSamples(z2, W2)
+  print("z2 samples", z2Samples)
+  
+  for z2 in z2Samples:
+    print("sample z2", z2)
+    numSamples = 3
+
+    max0 = extremum(0, W2[0][0], B2[0], z2)
+    sample0 = samples(max0)
+    lastSample = []
+  
+    for i0 in range(numSamples):
+      partial0 = W2[0][0] * sample0[i0]
+      max1 = extremum(partial0, W2[0][1], B2[0], z2)
+      sample1 = samples(max1)
+
+      for i1 in range(numSamples):
+        partial1 = partial0 + W2[0][1] * sample1[i1]
+        max2 = extremum(partial1, W2[0][2], B2[0], z2)
+        sample2 = samples(max2)
+
+        for i2 in range(numSamples):
+          partial2 = partial1 + W2[0][2] * sample2[i2]
+          max3 = extremum(partial2, W2[0][3], B2[0], z2)
+          sample3 = samples(max3)
+
+          for i3 in range(numSamples):
+            partial3 = partial2 + W2[0][3] * sample3[i3]
+            max4 = extremum(partial3, W2[0][4], B2[0], z2)
+            sample4 = samples(max4)
+
+            for i4 in range(numSamples):
+              partial4 = partial3 + W2[0][4] * sample4[i4]
+              max5 = extremum(partial4, W2[0][5], B2[0], z2)
+              sample5 = samples(max5)
+
+              for i5 in range(numSamples):
+                partial5 = partial4 + W2[0][5] * sample5[i5]
+                max6 = extremum(partial5, W2[0][6], B2[0], z2)
+                sample6 = samples(max6)
+
+                for i6 in range(numSamples):
+                  partial6 = partial5 + W2[0][6] * sample6[i6]
+                  max7 = extremum(partial6, W2[0][7], B2[0], z2)
+                  sample7 = samples(max7)
+
+                  for i7 in range(numSamples):
+                    partial7 = partial6 + W2[0][7] * sample7[i7]
+                    max8 = extremum(partial7, W2[0][8], B2[0], z2)
+                    sample8 = samples(max8)
+
+                    for i8 in range(numSamples):
+                      partial8 = partial7 + W2[0][8] * sample8[i8]
+                      max9 = extremum(partial8, W2[0][9], B2[0], z2)
+
+                      s0 = (sample0[i0])
+                      s1 = (sample1[i1])
+                      s2 = (sample2[i2])
+                      s3 = (sample3[i3])
+                      s4 = (sample4[i4])
+                      s5 = (sample5[i5])
+                      s6 = (sample6[i6])
+                      s7 = (sample7[i7])
+                      s8 = (sample8[i8])
+                      s9 = max9
+                      
+                      sample = [ s0, s1, s2, s3, s4, s5, s6, s7, s8, s9 ]
+                      if lastSample != sample:
+
+                        dotproduct = 0
+                        for i in range(10):
+                          dotproduct = dotproduct + W2[0][i] * sample[i]
+                        W2dotSamplePlusB2 = dotproduct + B2[0]
+                        error = z2 - W2dotSamplePlusB2
+                        print(sample, "error", error)
+                        lastSample = sample
+
+
 
 
 # there are two cases: fan-in, or fan-out, traversing from input to output.
@@ -184,10 +347,10 @@ for case in cases:
   print("")
   a2 = forward_activation(case)
   print("**** a2", a2)
-  x = backward_activation(a2)
+  #x = backward_activation(case, a2)
+  backward_sampling(a2)
   print("")
   print("**** forward a2", a2)
-  print("**** backward x", x)
 
 
 

@@ -6,16 +6,28 @@ import math
 import numpy
 from scipy import optimize
 
-
+# W1
 input_hidden_weights = [[-0.38688731,  0.26221564, -0.63275653, -0.63185972,  0.56936806,  0.66896194,
                          0.49006391,  0.44972926, -0.49830455,  0.5427345 ],
                         [-0.14791906,  0.38528341, -0.45161089,  0.6326226,   0.29551026, -0.56385952,
                          0.49083051, -0.44947305,  0.10054732,  0.54112089]]
+i = [ [-0.38688731, -0.14791906],
+     [0.26221564, 0.38528341],
+     [-0.63275653, -0.45161089],
+     [-0.63185972, 0.6326226],
+     [0.56936806, 0.29551026],
+     [0.66896194, -0.56385952],
+     [0.49006391, 0.49083051],
+     [0.44972926, -0.44947305],
+     [-0.49830455, 0.10054732],
+     [0.5427345, 0.54112089] ]
 
+# B1
 hidden_bias = [  0.00000000e+00,  -9.36306096e-05,   0.00000000e+00,   2.66444185e-05,
                1.97773712e-04,  -3.87232634e-03,  -4.90267992e-01,  -1.47563347e-04,
                -1.17809914e-01,  -5.40929019e-01]
 
+# W2
 hidden_output_weights = [[ 0.4027527 ,
                           0.3184571 ,
                           -0.3466984 ,
@@ -27,6 +39,7 @@ hidden_output_weights = [[ 0.4027527 ,
                           -0.23849073,
                           -0.83612299]]
 
+# B2
 output_bias = [-0.32433593]
 
 print("input_hidden_weights", input_hidden_weights)
@@ -229,30 +242,95 @@ def extremum(partialSum, w, b, z2):
 def samples(maxRange):
   return [ 0, maxRange * 0.02, maxRange ]
 
-def maxZ2(W2):
+#('**** a2', array([[ 0.]]))
+#('z2 samples', [-0.0, -0.12082581000000001, -0.24165162000000001, -0.36247743000000004, -0.48330324000000002, -0.60412905000000006, -0.72495486000000009, -0.84578067000000012, -0.96660648000000005, -1.0874322900000002, -1.2082581000000001])
+#('sample z2', -0.0)
+#([0, 0, 0, 0, 0, 0, 0, 0, 0, -0.38790457131193101], 'error', -0.0)
+
+#('**** a2', array([[ 0.5597363]]))
+#('z2 samples', [array([[ 0.5597363]])])
+#('sample z2', array([[ 0.5597363]]))
+#([0, 0, 0, 0, 0, 0, 0, 0, 0, array([[-1.05734711]])], 'error', array([[  2.22044605e-16]]))
+
+
+def maxZ(W):
   sumWeights = 0
-  for w in W2:
+  for w in W:
     sumWeights = sumWeights + w[0]
   maxActivation = 3
   return maxActivation * sumWeights
 
-def makeSamples(z2, W2):
-  if z2 > 0:
-    return [z2]
+def makeSamples(z, W):
+  print("makeSamples z", z, "W", W)
+  if z > 0:
+    return z[0]
   result = []
-  endpoint = maxZ2(W2)
+  endpoint = maxZ(W)
+  print("endpoint", endpoint)
   numSamples = 11
   for i in range(numSamples):
     result.append(i * -endpoint / (numSamples - 1))
   return result
 
+def nonsense(x):
+  if x < -0.25 or x > 1.25:
+    return True
+  if x > 0.25 and x < 0.75:
+    return True
+  return False
+
+inconsistent_solutions = 0
+nonsense_inputs = 0
+reasonable_inputs = 0
+epsilon = 0.001
+
+def computeInputLayer(a1):
+  global inconsistent_solutions
+  global nonsense_inputs
+  global reasonable_inputs
+  # layer 1 to input is overdetermined, solve by elimination
+  W1 = numpy.array(input_hidden_weights)
+  B1 = numpy.array(hidden_bias)
+  z1 = a1
+  # TODO explore z1[j]<0
+  # find a solution for the first two unknowns/equations
+  j0 = 0
+  j1 = 1
+  k1 = W1[0][j1] / W1[0][j0]
+  z1B1 = z1 - B1
+  x1_ = (z1B1[j1] - k1 * z1B1[j0]) / (W1[1][j1] - k1 * W1[1][j0])
+  x0_ = (z1B1[j0] - x1_ * W1[1][j0]) / W1[0][j0]
+  # test this solution for consistency with remaining equations
+  consistent = True
+  for j in range(10):
+    # W1[0][j] x0_ + W1[1][j] x1_ + B1[j] = z1[j]
+    z1_j = W1[0][j] * x0_ + W1[1][j] * x1_ + B1[j]
+    error = math.fabs(z1_j - z1[j])
+    reconstruction_error_threshold = 0.01
+    if error > reconstruction_error_threshold:
+      print("inconsistent solution, error =", error, a1)
+      inconsistent_solutions = inconsistent_solutions + 1
+      consistent = False
+      break
+  if consistent:
+    # test x0_, x1_ for statistical reasonableness
+    if nonsense(x0_) or nonsense(x1_):
+      print("nonsense input", x0_, x1_)
+      nonsense_inputs = nonsense_inputs + 1
+    else:
+      print("reasonable input", x0_, x1_)
+      reasonable_inputs = reasonable_inputs + 1
+
+
+
 def backward_sampling(a2):
 
+  # layer 2 to layer 1 is underdetermined, sample the free variables
   W2 = numpy.array(hidden_output_weights)
   B2 = numpy.array(output_bias)
   z2 = a2
   z2Samples = makeSamples(z2, W2)
-  print("z2 samples", z2Samples)
+  print("z2", z2, "z2 samples", z2Samples)
   
   for z2 in z2Samples:
     print("sample z2", z2)
@@ -326,7 +404,9 @@ def backward_sampling(a2):
                         W2dotSamplePlusB2 = dotproduct + B2[0]
                         error = z2 - W2dotSamplePlusB2
                         print(sample, "error", error)
+                        assert(math.fabs(error) < epsilon)
                         lastSample = sample
+                        computeInputLayer(sample)
 
 
 
@@ -349,8 +429,8 @@ for case in cases:
   print("**** a2", a2)
   #x = backward_activation(case, a2)
   backward_sampling(a2)
+  print("case", case, "inconsistent solutions", inconsistent_solutions, "nonsense inputs", nonsense_inputs, "reasonable inputs", reasonable_inputs)
   print("")
-  print("**** forward a2", a2)
 
 
 

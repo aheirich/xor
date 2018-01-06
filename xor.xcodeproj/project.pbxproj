@@ -22,15 +22,8 @@
 		4D02B16F1FCE5B0F00A074A1 /* xor */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = xor; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D02B1791FCE5B3A00A074A1 /* xor-keras.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = "xor-keras.py"; sourceTree = "<group>"; };
 		4D02B17A1FCE5B3A00A074A1 /* network.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = network.py; sourceTree = "<group>"; };
-		4D7F04E81FFBE638005E24F5 /* xor_0_0.log */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = xor_0_0.log; sourceTree = "<group>"; };
-		4D7F04E91FFBE638005E24F5 /* xor_0_1.ine */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = xor_0_1.ine; sourceTree = "<group>"; };
-		4D7F04EA1FFBE638005E24F5 /* xor_0_1.log */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = xor_0_1.log; sourceTree = "<group>"; };
-		4D7F04EB1FFBE638005E24F5 /* xor_1_1.ine */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = xor_1_1.ine; sourceTree = "<group>"; };
-		4D7F04EC1FFBE638005E24F5 /* xor_1_0.log */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = xor_1_0.log; sourceTree = "<group>"; };
-		4D7F04ED1FFBE638005E24F5 /* xor_1_0.ine */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = xor_1_0.ine; sourceTree = "<group>"; };
-		4D7F04EE1FFBE638005E24F5 /* xor_1_1.log */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = xor_1_1.log; sourceTree = "<group>"; };
-		4D7F04EF1FFBE638005E24F5 /* xor_0_0.ine */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = xor_0_0.ine; sourceTree = "<group>"; };
-		4DAA33081FF95621005396B8 /* scipy */ = {isa = PBXFileReference; lastKnownFileType = folder; name = scipy; path = xor/scipy; sourceTree = "<group>"; };
+		4DA2A43F200013B900FA3C9E /* n.log */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = n.log; sourceTree = "<group>"; };
+		4DA2A440200099FC00FA3C9E /* xor_inverse.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = xor_inverse.py; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -47,7 +40,6 @@
 		4D02B1661FCE5B0F00A074A1 = {
 			isa = PBXGroup;
 			children = (
-				4DAA33081FF95621005396B8 /* scipy */,
 				4D02B1711FCE5B0F00A074A1 /* xor */,
 				4D02B1701FCE5B0F00A074A1 /* Products */,
 			);
@@ -64,16 +56,10 @@
 		4D02B1711FCE5B0F00A074A1 /* xor */ = {
 			isa = PBXGroup;
 			children = (
-				4D7F04EF1FFBE638005E24F5 /* xor_0_0.ine */,
-				4D7F04E81FFBE638005E24F5 /* xor_0_0.log */,
-				4D7F04E91FFBE638005E24F5 /* xor_0_1.ine */,
-				4D7F04EA1FFBE638005E24F5 /* xor_0_1.log */,
-				4D7F04ED1FFBE638005E24F5 /* xor_1_0.ine */,
-				4D7F04EC1FFBE638005E24F5 /* xor_1_0.log */,
-				4D7F04EB1FFBE638005E24F5 /* xor_1_1.ine */,
-				4D7F04EE1FFBE638005E24F5 /* xor_1_1.log */,
+				4DA2A43F200013B900FA3C9E /* n.log */,
 				4D02B17A1FCE5B3A00A074A1 /* network.py */,
 				4D02B1791FCE5B3A00A074A1 /* xor-keras.py */,
+				4DA2A440200099FC00FA3C9E /* xor_inverse.py */,
 			);
 			path = xor;
 			sourceTree = "<group>";

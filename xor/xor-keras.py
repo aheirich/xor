@@ -9,14 +9,15 @@ training_data = np.array([[0,0],[0,1],[1,0],[1,1]], "float32")
 target_data = np.array([[0],[1],[1],[0]], "float32")
 
 model = Sequential()
-model.add(Dense(10, input_dim=2, activation='relu'))
+model.add(Dense(5, input_dim=2, activation='sigmoid'))
+#model.add(Dense(10, input_dim=2, activation='relu'))
 model.add(Dense(1, activation='sigmoid'))
 
 model.compile(loss='mean_squared_error',
               optimizer='adam',
               metrics=['binary_accuracy'])
 
-model.fit(training_data, target_data, nb_epoch=500, verbose=2)
+model.fit(training_data, target_data, nb_epoch=5000, verbose=2)
 
 print model.predict(training_data).round()
 
@@ -25,10 +26,10 @@ b01 = model.layers[0].get_weights()[1]
 w12 = model.layers[1].get_weights()[0]
 b12 = model.layers[1].get_weights()[1]
 print "input weights to hidden layer"
-print w01
+print "W1 =", w01
 print "hidden layer biases"
-print b01
+print "b1 =", b01
 print "hidden weights to output layer"
-print w12
+print "W2 =", w12
 print "output layer biases"
-print b12
+print "b2 =", b12

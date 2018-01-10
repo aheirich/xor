@@ -1,26 +1,26 @@
 
 #
-# xor network with 10 relu units in the hidden layer
+# xor network with 10 sigmoid units in the hidden layer
 #
 
 import math
 import numpy
 from scipy import optimize
 
+# 2 inputs, 2 hidden, 2 outputs
 
-# W1 2 inputs, 5 hidden
-W1 = [[-3.66874623,  3.96872973,  4.58811092, -3.42505884,  3.931144  ],
-      [-4.57925892,  4.58775187, -6.00651932, -4.14732027,  1.4203583 ]]
+#input weights to hidden layer
+W1 = numpy.array([[ 4.76426458,  3.15521908],
+      [ 4.49576712,  3.08746362]])
+#hidden layer biases
+B1 = numpy.array([-1.84902346, -4.64604139])
+#hidden weights to output layer
+W2 = numpy.array([[ 4.64140081, -5.0876627 ],
+      [-4.76921082,  5.23339081]])
+#output layer biases
+B2 = numpy.array([-2.06331062,  2.27055311])
 
-B1 = [ 0.57311267, -0.66280091, -2.59247088,  0.26248473, -3.34845424]
 
-W2 = [[-2.91450429],
-      [ 2.25845695],
-      [ 3.54164791],
-      [-2.85040522],
-      [-4.06980085]]
-
-B2 = [-0.11827146]
 
 print("W1 input_hidden_weights", W1)
 print("B1 hidden_bias", B1)
@@ -29,7 +29,6 @@ print("B2 output_bias", B2)
 
 
 def g(x):
-  print("g(", x, ")")
   result = []
   for x_ in x:
     result.append(1.0 / (1.0 + math.exp(-x_)))
@@ -38,7 +37,7 @@ def g(x):
 def gInverse(x):
   result = []
   for x_ in x:
-    result.append(gInverse(math.log(x / (1.0 - x_))))
+    result.append(math.log(x_ / (1.0 - x_)))
   return result
 
 # compute forward propagation
@@ -55,9 +54,10 @@ def forward_activation(input_activation):
   x = numpy.array(input_activation)
   z1_ = numpy.matmul(x, W1)
   print("W1.x", z1_)
+  print("B1", B1)
   z1 = (z1_ + B1)[0]
   print("z1", z1)
-  a1 = g(z1)
+  a1 = [g(z1)]
   print("a1", a1)
   
   # z[2] = W[2] a[1] + B[2]
@@ -66,68 +66,59 @@ def forward_activation(input_activation):
   
   z2_ = numpy.matmul(a1, W2)
   print("W2.a1", z2_)
-  z2 = (z2_ + B2)
+  z2 = (z2_ + B2)[0]
   print("z2", z2)
   a2 = g(z2)
   print("a2", a2)
   print("")
-  print("**** xor(", input_activation, ") = ", a2, "=", z2)
+  print("**** xor(", input_activation, ") = ", a2, "= g(", z2, ")")
   print("")
-  return z2[0]
+  return (a1, a2, x)
 
 
-# TODO deal with a2==0
+# Solve a Newton system:
+# W2.a1 + B2 - z2 = 0
+# W1.x + B1 - z1 = 0
+# eliminate a1
+# W2 . logistic(z1) + B2 - z2 = 0
+# W1 . x + B1 - z1 = 0
+def F(x, *args):
+  z2 = args[0]
+  z10 = x[0]
+  z11 = x[1]
+  x0 = x[2]
+  x1 = x[3]
+  return [ W2[0][0] * (1/(1+math.exp(-z10))) + W2[1][0] * (1/(1+math.exp(-z11))) + B2[0] - z2[0], \
+          W2[0][1] * (1/(1+math.exp(-z10))) + W2[1][1] * (1/(1+math.exp(-z11))) + B2[1] - z2[1], \
+          W1[0][0] * x0 + W1[1][0] * x1 + B1[0] - z10, \
+          W1[0][1] * x0 + W1[1][1] * x1 + B1[1] - z11 ]
+
+
+# Jacobian derived by Wolfram Alpha
+def DF(x, *args):
+  a = x[0]
+  b = x[1]
+  return \
+  [ [ (W2[0][0] * math.exp(-a))/((1 + math.exp(-a)) * (1 + math.exp(-a))), \
+   (W2[1][0] * math.exp(-b))/((1 + math.exp(-b)) * (1 + math.exp(-b))), \
+   0, \
+   0 ], \
+ [ (W2[0][1] * math.exp(-a))/((1 + math.exp(-a)) * (1 + math.exp(-a))), \
+ (W2[1][1] * math.exp(-b))/((1 + math.exp(-b))  * (1 + math.exp(-b))), \
+   0, \
+   0 ], \
+ [ -1, 0, W1[0][0], W1[1][0] ], \
+ [ 0, -1, W1[0][1], W1[1][1] ] ]
 
 
 
-def backward_activation(z2):
-  print("backward activation(", z2, ")")
-  #
-  # output to hidden layer
-  #
-#
-# linear program
-# W2.a1 + B2 = z2
-# W1.x + B1 = z1
-#
-# W2.a1 - z2 = -B2
-# W1.x - z1 = -B1
-# a1 = g(z1) = relu(z1)
-# unknowns are a1[10], x[2]
-# B is -B2 concat -B1 (1 concat 10)
-# top row of A is W2.T
-# next ten rows are zeroes except diagonals are -1 (for -z1)
-# bottom right corner is 2x10 weights W1
-#
-  _topLeft = W2.T
-  _bottomLeft = numpy.zeros((10, 10))
-  for i in range(10):
-    _bottomLeft[i, i] = -1
-  _topRight = numpy.array([[ 0, 0 ]])
-  _bottomRight = W1.T
-  _top = numpy.concatenate((_topLeft, _topRight), axis=1)
-  _bottom = numpy.concatenate((_bottomLeft, _bottomRight), axis=1)
-  A_eq = numpy.concatenate((_top, _bottom), axis=0)
-  print("A_eq", A_eq)
-  c = numpy.array([ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ])
-  b_eq = numpy.concatenate((-B2, -B1.T), axis=0)
-  print("b_eq", b_eq)
-  result = optimize.linprog(c, A_eq=A_eq, b_eq=b_eq)
-  print("linprog result", result)
-# problem this is a nonsquare matrix we are missing one constraint
-# linprog cannot find a feasible solution
-# add one more constract z2=...
-# now it is a square matrix solve by elimination
-#
-  print("gZ1", gZ1)
-  print("gX", gX)
-  u = numpy.concatenate((gZ1, gX), axis=1)
-  print("u", u)
-  b = numpy.matmul(A_eq, u.T)
-  print("b", b)
-  print("b_eq", b_eq)
-
-
+def backward_activation(a1Forward, a2, xForward):
+  print("backward activation(", a2, ")")
+  z2 = gInverse(a2)
+  print("z2", z2)
+  xInitial = numpy.array([ 0, 0, 0, 0 ])
+  solution = optimize.fsolve(F, xInitial, z2, fprime=DF)
+  return solution
 
 
 
@@ -140,8 +131,9 @@ for case in cases:
   print("")
   print("**** case ", case, " ****")
   print("")
-  z2 = forward_activation(case)
-#x = backward_activation(z2)
-#print("case", case, "x", x)
+  (a1, a2, x) = forward_activation(case)
+  solution = backward_activation(a1, a2, x)
+  xSolution = solution[2:]
+  print("case", case, "inverted solution", xSolution)
 
 

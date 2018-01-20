@@ -6,8 +6,21 @@
 	objectVersion = 48;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		4D9DE57D2012F691005B32E9 /* xor_relu_inverse_ipopt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4D620FB72012BF7200434DFD /* xor_relu_inverse_ipopt.cpp */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		4D02B16D1FCE5B0F00A074A1 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		4D9DE5742012F680005B32E9 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = /usr/share/man/man1/;
@@ -22,13 +35,22 @@
 		4D02B16F1FCE5B0F00A074A1 /* xor */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = xor; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D02B1791FCE5B3A00A074A1 /* xor-keras.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = "xor-keras.py"; sourceTree = "<group>"; };
 		4D02B17A1FCE5B3A00A074A1 /* network.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = network.py; sourceTree = "<group>"; };
+		4D620FB72012BF7200434DFD /* xor_relu_inverse_ipopt.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = xor_relu_inverse_ipopt.cpp; sourceTree = "<group>"; };
+		4D620FB82012BF7200434DFD /* xor_relu_inverse_ipopt.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = xor_relu_inverse_ipopt.hpp; sourceTree = "<group>"; };
+		4D9DE5762012F680005B32E9 /* xor_relu_inverse_ipopt */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = xor_relu_inverse_ipopt; sourceTree = BUILT_PRODUCTS_DIR; };
+		4D9DE57E20130900005B32E9 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		4DA2A44220019DEF00FA3C9E /* xor_sigmoid_inverse.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = xor_sigmoid_inverse.py; sourceTree = "<group>"; };
-		4DA2A4432001B2D100FA3C9E /* xor_relu_inverse.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = xor_relu_inverse.py; sourceTree = "<group>"; };
-		4DA2A4442001CE9300FA3C9E /* x.log */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = x.log; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		4D02B16C1FCE5B0F00A074A1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4D9DE5732012F680005B32E9 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -50,6 +72,7 @@
 			isa = PBXGroup;
 			children = (
 				4D02B16F1FCE5B0F00A074A1 /* xor */,
+				4D9DE5762012F680005B32E9 /* xor_relu_inverse_ipopt */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -57,11 +80,12 @@
 		4D02B1711FCE5B0F00A074A1 /* xor */ = {
 			isa = PBXGroup;
 			children = (
-				4DA2A4442001CE9300FA3C9E /* x.log */,
-				4DA2A4432001B2D100FA3C9E /* xor_relu_inverse.py */,
+				4D620FB72012BF7200434DFD /* xor_relu_inverse_ipopt.cpp */,
+				4D620FB82012BF7200434DFD /* xor_relu_inverse_ipopt.hpp */,
 				4DA2A44220019DEF00FA3C9E /* xor_sigmoid_inverse.py */,
 				4D02B17A1FCE5B3A00A074A1 /* network.py */,
 				4D02B1791FCE5B3A00A074A1 /* xor-keras.py */,
+				4D9DE57E20130900005B32E9 /* Makefile */,
 			);
 			path = xor;
 			sourceTree = "<group>";
@@ -86,6 +110,23 @@
 			productReference = 4D02B16F1FCE5B0F00A074A1 /* xor */;
 			productType = "com.apple.product-type.tool";
 		};
+		4D9DE5752012F680005B32E9 /* xor_relu_inverse_ipopt */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4D9DE57C2012F686005B32E9 /* Build configuration list for PBXNativeTarget "xor_relu_inverse_ipopt" */;
+			buildPhases = (
+				4D9DE5722012F680005B32E9 /* Sources */,
+				4D9DE5732012F680005B32E9 /* Frameworks */,
+				4D9DE5742012F680005B32E9 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = xor_relu_inverse_ipopt;
+			productName = xor_relu_inverse_ipopt;
+			productReference = 4D9DE5762012F680005B32E9 /* xor_relu_inverse_ipopt */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -96,6 +137,10 @@
 				ORGANIZATIONNAME = "Heirich, Alan";
 				TargetAttributes = {
 					4D02B16E1FCE5B0F00A074A1 = {
+						CreatedOnToolsVersion = 9.0;
+						ProvisioningStyle = Automatic;
+					};
+					4D9DE5752012F680005B32E9 = {
 						CreatedOnToolsVersion = 9.0;
 						ProvisioningStyle = Automatic;
 					};
@@ -114,6 +159,7 @@
 			projectRoot = "";
 			targets = (
 				4D02B16E1FCE5B0F00A074A1 /* xor */,
+				4D9DE5752012F680005B32E9 /* xor_relu_inverse_ipopt */,
 			);
 		};
 /* End PBXProject section */
@@ -123,6 +169,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4D9DE5722012F680005B32E9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4D9DE57D2012F691005B32E9 /* xor_relu_inverse_ipopt.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -235,7 +289,9 @@
 		4D02B1771FCE5B1500A074A1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
 				CODE_SIGN_STYLE = Automatic;
+				HEADER_SEARCH_PATHS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -243,7 +299,29 @@
 		4D02B1781FCE5B1500A074A1 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
 				CODE_SIGN_STYLE = Automatic;
+				HEADER_SEARCH_PATHS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		4D9DE57A2012F686005B32E9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../ipopt/CoinIpopt/Ipopt/src/Interfaces\"";
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		4D9DE57B2012F686005B32E9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../ipopt/CoinIpopt/Ipopt/src/Interfaces\"";
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -265,6 +343,15 @@
 			buildConfigurations = (
 				4D02B1771FCE5B1500A074A1 /* Debug */,
 				4D02B1781FCE5B1500A074A1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4D9DE57C2012F686005B32E9 /* Build configuration list for PBXNativeTarget "xor_relu_inverse_ipopt" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4D9DE57A2012F686005B32E9 /* Debug */,
+				4D9DE57B2012F686005B32E9 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

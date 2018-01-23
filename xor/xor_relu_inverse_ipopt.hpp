@@ -1,6 +1,5 @@
 //
 //  xor_relu_inverse_ipopt.hpp
-//  xor
 //
 //  Created by Heirich, Alan on 1/19/18.
 //  Copyright © 2018 Heirich, Alan. All rights reserved.
@@ -12,10 +11,18 @@
 #include <stdio.h>
 #include "IpStdCInterface.h"
 
+const unsigned numInputUnits = 2;
+const unsigned numHiddenUnits = 10;
+const unsigned numOutputUnits = 2;
+const unsigned numActivations = numInputUnits + numHiddenUnits + numOutputUnits;
+const unsigned numAlpha = numInputUnits + numHiddenUnits;
+const unsigned numUnknowns = numActivations + numAlpha;
+const unsigned numConstraints = 3 * numAlpha;
+
 /* This is an example how user_data can be used. */
 struct MyUserData
 {
-  Number g_offset[2]; /* This is an offset for the constraints.  */
+  Number ao_target[numOutputUnits];
 };
 
 Bool eval_f(Index n, Number* x, Bool new_x,

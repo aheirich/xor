@@ -10,33 +10,43 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
+#include <cstring>
 
 
 // input weights to hidden layer
 Number W1[numInputUnits][numHiddenUnits] = {
-  { 0.9145419,  -0.5964824,  -0.642739,   -0.34978598,  0.41890582,  0.22138357,
-    -0.08724618, -0.17340243, -0.06329376,  0.45263577},
-  {-0.88043803,  0.70016438,  0.94026381,  0.19096281, -0.66918135,  0.26964825,
-    -0.33756,    -0.1920374,  -0.11555147,  0.92417163 }};
+  { -0.4055348,  -0.52823716, -0.43952978, -0.18343377, -0.47216558, -0.32241216,
+     -0.55611771, -0.38063344,  0.04775526, -0.76964206, -0.44537184,  0.58646101,
+     0.83039683, -0.26692185, -0.48729387, -0.3081055 },
+     {-0.29524794,  0.52825111, -0.21107587, -0.23073712, -0.55283833, -0.12979296,
+     0.55611771, -0.36968827,  0.00462923,  0.76966035, -0.15453213, -0.58635885,
+     -0.83039653, -0.04750431, -0.08500406,  0.4753032 }};
 // hidden layer biases
 Number b1[numHiddenUnits] =
-{ -1.29862165e-08,  -2.89841706e-10,  -3.04766568e-09,  -1.96804002e-01,
-  -3.54976351e-08,   6.22820675e-01,   0.00000000e+00,   0.00000000e+00,
-  0.00000000e+00,  -4.52658087e-01 };
+{ 2.95232803e-01,  -1.23388522e-09,   0.00000000e+00,   0.00000000e+00,
+  0.00000000e+00,   0.00000000e+00,   2.25655539e-09,   0.00000000e+00,
+  2.17137873e-01,  -4.03572953e-09,   0.00000000e+00,   3.15902193e-10,
+  1.22724542e-09,   0.00000000e+00,   0.00000000e+00,   3.08106124e-01 };
 // hidden weights to output layer
 Number W2[numHiddenUnits][numOutputUnits] = {
-  { 0.99346685, -0.81308043},
-  { 0.60336119, -0.51245868},
-  { 0.79297972, -0.97627968},
-  {-0.19056943, -0.17135906},
-  { 0.17632513, -0.93301785},
-  { 0.07936023,  0.60728908},
-  { 0.29867882, -0.16222471},
-  { 0.3594684,   0.53735191},
-  {-0.39656982, -0.59148967},
-  {-0.4018164,   0.07913463 }};
+  { 0.3061325,   0.7249217 },
+  { 0.82212615, -0.87020439},
+  {-0.16003487,  0.05678433},
+  { 0.03079337,  0.03488749},
+  {-0.12205628, -0.03029424},
+  {-0.34037149, -0.16318902},
+  { 0.15318292, -1.06993532},
+  {-0.17671171,  0.4517504 },
+  {-0.05496955,  0.47440329},
+  { 0.6847145,  -0.35256037},
+  {-0.3802914,   0.24590087},
+  { 0.69478261, -0.19410631},
+  { 0.86003262, -0.41682884},
+  {-0.32823354,  0.22413403},
+  { 0.57643712, -0.20763171},
+  { 0.09290985,  1.13164198}};
 // output layer biases
-Number b2[numOutputUnits] = {-0.049427,    0.62176669};
+Number b2[numOutputUnits] = {-0.10707041,  0.33430237};
 
 /*
  * Relu constraint a=max(z,0)
@@ -79,7 +89,7 @@ Number b2[numOutputUnits] = {-0.049427,    0.62176669};
  * Order of unknowns:
  * Z2 (2)
  * Z1 (10)
- * a0 (2)
+ * Z0 (2)
  * alpha2 (2)
  * alpha1 (10)
  
@@ -102,12 +112,40 @@ Number b2[numOutputUnits] = {-0.049427,    0.62176669};
  * (1 - alpha1_i) (W1 z0 + b1 -z1)_i <= 0
  * alpha1_i (1 - alpha1_i) = 0
  
- * ...
- * z0_0 >= 0
- * z1_0 >= 0
- 
  */
 
+
+void computeInitialValues(Number* x) {
+  // case 1,0
+  // initialize Z to a known solution
+  Number z2_10[] = {
+    9.99999865e-01,   1.19366783e-07
+  };
+  Number z1_10[] = {
+    -1.10301997e-01,  -5.28237161e-01,  -4.39529780e-01,
+    -1.83433770e-01,  -4.72165580e-01,  -3.22412160e-01,
+    -5.56117708e-01,  -3.80633440e-01,   2.64893133e-01,
+    -7.69642064e-01,  -4.45371840e-01,   5.86461010e-01,
+    8.30396831e-01,  -2.66921850e-01,  -4.87293870e-01,
+    6.24000000e-07
+  };
+  Number* z2 = x;
+  memcpy(z2, z2_10, numOutputUnits * sizeof(Number));
+  Number* z1 = z2 + numOutputUnits;
+  memcpy(z1, z1_10, numHiddenUnits * sizeof(Number));
+  Number* z0 = z1 + numHiddenUnits;
+  z0[0] = 1;
+  z0[1] = 0;
+  // initialize alpha with respect to the known z
+  Number* alpha2 = z0 + numInputUnits;
+  for(unsigned i = 0; i < numOutputUnits; ++i) {
+    alpha2[i] = (z2[i] <= 0) ? 1 : 0;
+  }
+  Number* alpha1 = alpha2 + numOutputUnits;
+  for(unsigned i = 0; i < numHiddenUnits; ++i) {
+    alpha1[i] = (z1[i] <= 0) ? 1 : 0;
+  }
+}
 
 
 int main()
@@ -130,6 +168,10 @@ int main()
   Number obj;                          /* objective value */
   Index i;                             /* generic counter */
   
+  //Ipopt::SmartPtr<Ipopt::IpoptApplication> app = IpoptApplicationFactory();
+  //app->Options()->SetStringValue("hessian_approximation", "limited-memory");
+
+  
   /* Number of nonzeros in the Jacobian of the constraints */
   Index nele_jac = numConstraints * numUnknowns;
   /* Number of nonzeros in the Hessian of the Lagrangian (lower or
@@ -146,6 +188,7 @@ int main()
   n = numUnknowns;
   x_L = (Number*)malloc(sizeof(Number)*n);
   x_U = (Number*)malloc(sizeof(Number)*n);
+  
   /* set the values for the variable bounds */
   for (i=0; i<n; i++) {
     x_L[i] = -5.0;
@@ -156,10 +199,11 @@ int main()
   m = numConstraints;
   g_L = (Number*)malloc(sizeof(Number)*m);
   g_U = (Number*)malloc(sizeof(Number)*m);
+  
   /* set the values of the constraint bounds */
   for(unsigned i = 0; i < m; ++i) {
     g_U[i] = 0;
-    if(i % 3 == 1) {
+    if(i % 3 == 1) {//inequality constraint
       g_L[i] = -10.0;
     } else {
       g_L[i] = 0;
@@ -178,25 +222,21 @@ int main()
   free(g_L);
   free(g_U);
   
-  /* Set some options.  Note the following ones are only examples,
-   they might not be suitable for your problem. */
-  AddIpoptNumOption(nlp, (char*)"tol", 1e-7);
-  AddIpoptStrOption(nlp, (char*)"mu_strategy", (char*)"adaptive");
-  AddIpoptStrOption(nlp, (char*)"output_file", (char*)"ipopt.out");
-  
+  /* Set some options. */
+//  AddIpoptStrOption(nlp, (char*)"output_file", (char*)"ipopt.out");
+  AddIpoptStrOption(nlp, (char*)"hessian_approximation", (char*)"limited-memory");
+
   /* allocate space for the initial point and set the values */
-  x = (Number*)malloc(sizeof(Number)*n);
-  x[0] = 1.0;
-  x[1] = 5.0;
-  x[2] = 5.0;
-  x[3] = 1.0;
+  x = (Number*)calloc(n, sizeof(Number));
+  computeInitialValues(x);
   
+
   /* allocate space to store the bound multipliers at the solution */
   mult_g = (Number*)malloc(sizeof(Number)*m);
   mult_x_L = (Number*)malloc(sizeof(Number)*n);
   mult_x_U = (Number*)malloc(sizeof(Number)*n);
   
-  /* Initialize the user data */
+  /* Initialize the user data with the value of the network output layer. */
   user_data.ao_target[0] = 1.0;
   user_data.ao_target[1] = 0.0;
   
@@ -231,47 +271,6 @@ int main()
   }
   else {
     printf("\n\nERROR OCCURRED DURING IPOPT OPTIMIZATION.\n");
-  }
-  
-  /* Now we are going to solve this problem again, but with slightly
-   modified constraints.  We change the constraint offset of the
-   first constraint a bit, and resolve the problem using the warm
-   start option. */
-  user_data.g_offset[0] = 0.2;
-  
-  if (status == Solve_Succeeded) {
-    /* Now resolve with a warmstart. */
-    AddIpoptStrOption(nlp, (char*)"warm_start_init_point", (char*)"yes");
-    /* The following option reduce the automatic modification of the
-     starting point done my Ipopt. */
-    AddIpoptNumOption(nlp, (char*)"bound_push", 1e-5);
-    AddIpoptNumOption(nlp, (char*)"bound_frac", 1e-5);
-    status = IpoptSolve(nlp, x, NULL, &obj, mult_g, mult_x_L, mult_x_U, &user_data);
-    
-    if (status == Solve_Succeeded) {
-      printf("\n\nSolution of the primal variables, x\n");
-      for (i=0; i<n; i++) {
-        printf("x[%d] = %e\n", i, x[i]);
-      }
-      
-      printf("\n\nSolution of the ccnstraint multipliers, lambda\n");
-      for (i=0; i<m; i++) {
-        printf("lambda[%d] = %e\n", i, mult_g[i]);
-      }
-      printf("\n\nSolution of the bound multipliers, z_L and z_U\n");
-      for (i=0; i<n; i++) {
-        printf("z_L[%d] = %e\n", i, mult_x_L[i]);
-      }
-      for (i=0; i<n; i++) {
-        printf("z_U[%d] = %e\n", i, mult_x_U[i]);
-      }
-      
-      printf("\n\nObjective value\n");
-      printf("f(x*) = %e\n", obj);
-    }
-    else {
-      printf("\n\nERROR OCCURRED DURING IPOPT OPTIMIZATION WITH WARM START.\n");
-    }
   }
   
   /* free allocated memory */
@@ -315,7 +314,13 @@ void activation1(Number W1[numInputUnits][numHiddenUnits],
                  Number a1[numHiddenUnits])
 {
   Number z1[numHiddenUnits];
-  affine1(W1, z0, b1, z1);
+  for(unsigned i = 0; i < numHiddenUnits; ++i) {
+    z1[i] = 0;
+    for(unsigned j = 0; j < numInputUnits; ++j) {
+      z1[i] += W1[j][i] * Relu(z0[j]);
+    }
+    z1[i] += b1[i];
+  }
   for(unsigned i = 0; i < numHiddenUnits; ++i) {
     a1[i] = Relu(z1[i]);
   }
@@ -342,10 +347,52 @@ void activation2(Number W2[numHiddenUnits][numOutputUnits],
                  Number a2[numOutputUnits])
 {
   Number z2[numOutputUnits];
-  affine2(W2, z1, b2, z2);
+  for(unsigned i = 0; i < numOutputUnits; ++i) {
+    z2[i] = 0;
+    for(unsigned j = 0; j < numHiddenUnits; ++j) {
+      z2[i] += W2[j][i] * Relu(z1[j]);
+    }
+    z2[i] += b2[i];
+  }
   for(unsigned i = 0; i < numOutputUnits; ++i) {
     a2[i] = Relu(z2[i]);
   }
+}
+
+
+void printUnknowns(Number* x) {
+  static unsigned iteration = 0;
+  Number* z2 = x;
+  Number* z1 = z2 + numOutputUnits;
+  Number* z0 = z1 + numHiddenUnits;
+  Number* alpha2 = z0 + numInputUnits;
+  Number* alpha1 = alpha2 + numOutputUnits;
+  std::cout << "=== iteration " << iteration++ << "===" << std::endl;
+  std::cout << "z2: ";
+  for(unsigned i = 0; i < numOutputUnits; ++i) {
+    std::cout << z2[i] << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "z1: ";
+  for(unsigned i = 0; i < numHiddenUnits; ++i) {
+    std::cout << z1[i] << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "z0: ";
+  for(unsigned i = 0; i < numInputUnits; ++i) {
+    std::cout << z0[i] << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "alpha2: ";
+  for(unsigned i = 0; i < numOutputUnits; ++i) {
+    std::cout << alpha2[i] << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "alpha1: ";
+  for(unsigned i = 0; i < numHiddenUnits; ++i) {
+    std::cout << alpha1[i] << " ";
+  }
+  std::cout << std::endl;
 }
 
 
@@ -355,6 +402,7 @@ Bool eval_f(Index n, Number* x, Bool new_x,
             Number* obj_value, UserDataPtr user_data)
 {
   assert(n == numUnknowns);
+  printUnknowns(x);
   Number* z1 = x + numInputUnits;
   Number a_o_computed[numOutputUnits];
   activation2(W2, z1, b2, a_o_computed);
@@ -366,6 +414,10 @@ Bool eval_f(Index n, Number* x, Bool new_x,
     sumSquaredError += error * error;
   }
   *obj_value = sumSquaredError;
+  //
+  std::cout << "ao_computed: " << a_o_computed[0] << " " << a_o_computed[1] << std::endl;
+  std::cout << "objective: " << sumSquaredError << std::endl;
+  //
   return TRUE;
 }
 
@@ -379,9 +431,12 @@ Bool eval_grad_f(Index n, Number* x, Bool new_x,
   struct MyUserData* data = (struct MyUserData*)user_data;
   Number* a_o_target = data->ao_target;
   Number* z_o = x;
+  std::cout << "grad F: ";
   for(unsigned i = 0; i < numOutputUnits; ++i) {
     grad_f[i] = 2 * (Relu(z_o[i]) - a_o_target[i]);
+    std::cout << grad_f[i] << " ";
   }
+  std::cout << std::endl;
   return TRUE;
 }
 
@@ -421,6 +476,18 @@ Bool eval_g(Index n, Number* x, Bool new_x,
     *gNext++ = (1 - alpha1[i]) * z1_computed[i]; // <= z if z == 0
     *gNext++ = alpha1[i] * (1 - alpha1[i]);
   }
+  
+  std::cout << "constraints g, z2: ";
+  for(unsigned i = 0; i < numOutputUnits; ++i) {
+    std::cout << g[i] << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "constraints g, z1: ";
+  for(unsigned i = 0; i < numHiddenUnits; ++i) {
+    std::cout << g[i + numOutputUnits] << " ";
+  }
+  std::cout << std::endl;
+
   return TRUE;
 }
 
@@ -476,6 +543,7 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     
     values[numPoints++] = alpha2[0] * -1;
     values[numPoints++] = 0;
+    assert(numOutputUnits == 2);
     
     // d g[0] / d z1
     
@@ -493,6 +561,7 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     
     values[numPoints++] = z2_computed[0] - z2[0];
     values[numPoints++] = 0;
+    assert(numOutputUnits == 2);
     
     // d g[0] / d alpha1
     
@@ -500,7 +569,7 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
       values[numPoints++] = 0;
     }
       
-    
+    assert(numPoints == numUnknowns);
     
     ///// g[1] /////
     
@@ -508,11 +577,12 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     
     values[numPoints++] = 0;
     values[numPoints++] = 0;
+    assert(numOutputUnits == 2);
     
     // d g[1] / d z1
     
     for(unsigned j = 0; j < numHiddenUnits; ++j) {
-      values[numPoints++] = alpha2[0] * W2[j][0];
+      values[numPoints++] = -1 * alpha2[0] * W2[j][0];
     }
     
     // d g[1] / d z0
@@ -523,8 +593,9 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     
     // d g[1] / d alpha2
     
-    values[numPoints++] = z2_computed[0];
+    values[numPoints++] = -1 * z2_computed[0];
     values[numPoints++] = 0;
+    assert(numOutputUnits == 2);
     
     // d g[1] / d alpha1
     
@@ -532,6 +603,7 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
       values[numPoints++] = 0;
     }
     
+    assert(numPoints % numUnknowns == 0);
     
     
     ///// g[2] /////
@@ -546,6 +618,7 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     
     values[numPoints++] = 1 - 2 * alpha2[0];
     values[numPoints++] = 0;
+    assert(numOutputUnits == 2);
     
     // d g[2] / d alpha1
     
@@ -553,7 +626,9 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
       values[numPoints++] = 0;
     }
     
+    assert(numPoints % numUnknowns == 0);
     
+
     
     
     ///// g[3] /////
@@ -562,6 +637,7 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     
     values[numPoints++] = 0;
     values[numPoints++] = alpha2[1] * -1;
+    assert(numOutputUnits == 2);
     
     // d g[3] / d z1
     
@@ -579,6 +655,7 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     
     values[numPoints++] = 0;
     values[numPoints++] = z2_computed[1] - z2[1];
+    assert(numOutputUnits == 2);
     
     // d g[3] / d alpha1
     
@@ -586,7 +663,9 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
       values[numPoints++] = 0;
     }
     
+    assert(numPoints % numUnknowns == 0);
     
+
     
     
     ///// g[4] /////
@@ -595,11 +674,12 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     
     values[numPoints++] = 0;
     values[numPoints++] = 0;
-    
+    assert(numOutputUnits == 2);
+
     // d g[4] / d z1
     
     for(unsigned j = 0; j < numHiddenUnits; ++j) {
-      values[numPoints++] = alpha2[1] * W2[j][1];
+      values[numPoints++] = -1 * alpha2[1] * W2[j][1];
     }
     
     // d g[4] / d z0
@@ -611,14 +691,19 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     // d g[4] / d alpha2
     
     values[numPoints++] = 0;
-    values[numPoints++] = z2_computed[1];
-    
+    values[numPoints++] = -1 * z2_computed[1];
+    assert(numOutputUnits == 2);
+
     // d g[4] / d alpha1
     
     for(unsigned i = 0; i < numHiddenUnits; ++i) {
       values[numPoints++] = 0;
     }
+
     
+    assert(numPoints % numUnknowns == 0);
+    
+
     
     ///// g[5] /////
     
@@ -632,15 +717,20 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     
     values[numPoints++] = 0;
     values[numPoints++] = 1 - 2 * alpha2[1];
-    
+    assert(numOutputUnits == 2);
+
     // d g[5] / d alpha1
     
     for(unsigned i = 0; i < numHiddenUnits; ++i) {
       values[numPoints++] = 0;
     }
+
     
+    assert(numPoints % numUnknowns == 0);
     
-    ///// g[6..35] /////
+
+    
+    ///// g[6..] /////
     
     Number z1_computed[numHiddenUnits];
     affine1(W1, z0, b1, z1_computed);
@@ -651,12 +741,13 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
  
       values[numPoints++] = 0;
       values[numPoints++] = 0;
+      assert(numOutputUnits == 2);
 
       // d g[6] / d z1
       
       for(unsigned i = 0; i < numHiddenUnits; ++i) {
         if(i == unit) {
-          values[numPoints++] = alpha1[unit] * -1;
+          values[numPoints++] = -1 * alpha1[unit];
         } else {
           values[numPoints++] = 0;
         }
@@ -666,27 +757,34 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
       
       values[numPoints++] = alpha1[unit] * W1[0][unit];
       values[numPoints++] = alpha1[unit] * W1[1][unit];
+      assert(numInputUnits == 2);
 
       // d g[6] / d alpha2
       
       values[numPoints++] = 0;
       values[numPoints++] = 0;
-      
+      assert(numOutputUnits == 2);
+
       // d g[6] / d alpha1
       
       for(unsigned i = 0; i < numHiddenUnits; ++i) {
         if(i == unit) {
-          values[numPoints++] = z1_computed[unit] - z1[unit];
+          values[numPoints++] = z1_computed[i] - z1[i];
         } else {
           values[numPoints++] = 0;
         }
       }
+     
       
+      assert(numPoints % numUnknowns == 0);
+      
+
       
       // d g[7] / d z2
       
       values[numPoints++] = 0;
       values[numPoints++] = 0;
+      assert(numOutputUnits == 2);
 
       // d g[7] / d z1
       
@@ -696,23 +794,29 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
       
       // d g[7] / d z0
       
-      values[numPoints++] = -1 * alpha1[unit] * W1[0][unit];
-      values[numPoints++] = -1 * alpha1[unit] * W1[1][unit];
+      for(unsigned i = 0; i < numInputUnits; ++i) {
+        values[numPoints++] = -1 * alpha1[unit] * W1[i][unit];
+      }
 
       // d g[7] / d alpha2
       
       values[numPoints++] = 0;
       values[numPoints++] = 0;
-      
+      assert(numOutputUnits == 2);
+
       // d g[7] / d alpha1
 
       for(unsigned i = 0; i < numHiddenUnits; ++i) {
         if(i == unit) {
-          values[numPoints++] = z1_computed[unit];
+          values[numPoints++] = -1 * z1_computed[i];
         } else {
           values[numPoints++] = 0;
         }
       }
+
+      
+      assert(numPoints % numUnknowns == 0);
+      
 
       
       // d g[8] / d z, d alpha2
@@ -731,9 +835,26 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
         }
       }
 
+      assert(numPoints % numUnknowns == 0);
+
     }
 
+    assert(numPoints == numUnknowns *  numConstraints);
 
+    std::cout << "Jacobian of constraint grad_g:" << std::endl;
+    unsigned valuesIdx = 0;
+    for(unsigned gIdx = 0; gIdx < numConstraints; ++gIdx) {
+      std::cout << gIdx << ": ";
+      for(unsigned i = 0; i < numUnknowns; ++i) {
+        if(i == numOutputUnits || i == numOutputUnits + numHiddenUnits
+           || i == numActivations || i == numActivations + numOutputUnits
+           || i == numActivations + numOutputUnits + numHiddenUnits) {
+          std::cout << "\t| ";
+        }
+        std::cout << values[valuesIdx++] << " ";
+      }
+      std::cout << std::endl;
+    }
   }
   
   return TRUE;
@@ -747,67 +868,12 @@ Bool eval_h(Index n, Number *x, Bool new_x, Number obj_factor,
             Index nele_hess, Index *iRow, Index *jCol,
             Number *values, UserDataPtr user_data)
 {
-  Index idx = 0; /* nonzero element counter */
-  Index row = 0; /* row counter for loop */
-  Index col = 0; /* col counter for loop */
-  if (values == NULL) {
-    /* return the structure. This is a symmetric matrix, fill the lower left
-     * triangle only. */
-    
-    /* the hessian for this problem is actually dense */
-    idx=0;
-    for (row = 0; row < 4; row++) {
-      for (col = 0; col <= row; col++) {
-        iRow[idx] = row;
-        jCol[idx] = col;
-        idx++;
-      }
-    }
-    
-    assert(idx == nele_hess);
-  }
-  else {
-    /* return the values. This is a symmetric matrix, fill the lower left
-     * triangle only */
-    
-    /* fill the objective portion */
-    values[0] = obj_factor * (2*x[3]);               /* 0,0 */
-    
-    values[1] = obj_factor * (x[3]);                 /* 1,0 */
-    values[2] = 0;                                   /* 1,1 */
-    
-    values[3] = obj_factor * (x[3]);                 /* 2,0 */
-    values[4] = 0;                                   /* 2,1 */
-    values[5] = 0;                                   /* 2,2 */
-    
-    values[6] = obj_factor * (2*x[0] + x[1] + x[2]); /* 3,0 */
-    values[7] = obj_factor * (x[0]);                 /* 3,1 */
-    values[8] = obj_factor * (x[0]);                 /* 3,2 */
-    values[9] = 0;                                   /* 3,3 */
-    
-    
-    /* add the portion for the first constraint */
-    values[1] += lambda[0] * (x[2] * x[3]);          /* 1,0 */
-    
-    values[3] += lambda[0] * (x[1] * x[3]);          /* 2,0 */
-    values[4] += lambda[0] * (x[0] * x[3]);          /* 2,1 */
-    
-    values[6] += lambda[0] * (x[1] * x[2]);          /* 3,0 */
-    values[7] += lambda[0] * (x[0] * x[2]);          /* 3,1 */
-    values[8] += lambda[0] * (x[0] * x[1]);          /* 3,2 */
-    
-    /* add the portion for the second constraint */
-    values[0] += lambda[1] * 2;                      /* 0,0 */
-    
-    values[2] += lambda[1] * 2;                      /* 1,1 */
-    
-    values[5] += lambda[1] * 2;                      /* 2,2 */
-    
-    values[9] += lambda[1] * 2;                      /* 3,3 */
-  }
-  
-  return TRUE;
+  // we are using the quasi-newton approximation of second derivatives
+  // so we don't need to hessian of the lagrangian
+  return FALSE;
 }
+
+
 
 Bool intermediate_cb(Index alg_mod, Index iter_count, Number obj_value,
                      Number inf_pr, Number inf_du, Number mu, Number d_norm,

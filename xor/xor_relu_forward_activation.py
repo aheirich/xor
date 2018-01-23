@@ -1,6 +1,6 @@
 
 #
-# xor network with 10 relu units in the hidden layer
+# xor network with 16 relu units in the hidden layer
 #
 
 import math
@@ -9,25 +9,39 @@ from scipy import optimize
 
 
 # W1 2 inputs, 10 hidden
-input_hidden_weights = [[-0.38688731,  0.26221564, -0.63275653, -0.63185972,  0.56936806,  0.66896194,
-                         0.49006391,  0.44972926, -0.49830455,  0.5427345 ],
-                        [-0.14791906,  0.38528341, -0.45161089,  0.6326226,   0.29551026, -0.56385952,
-                         0.49083051, -0.44947305,  0.10054732,  0.54112089]]
-
+input_hidden_weights = [[-0.4055348,  -0.52823716, -0.43952978, -0.18343377, -0.47216558, -0.32241216,
+                         -0.55611771, -0.38063344,  0.04775526, -0.76964206, -0.44537184,  0.58646101,
+                         0.83039683, -0.26692185, -0.48729387, -0.3081055 ],
+                        [-0.29524794,  0.52825111, -0.21107587, -0.23073712, -0.55283833, -0.12979296,
+                         0.55611771, -0.36968827,  0.00462923,  0.76966035, -0.15453213, -0.58635885,
+                         -0.83039653, -0.04750431, -0.08500406,  0.4753032 ]]
 
 # B1
-hidden_bias = [ 0.00000000e+00, -9.36306096e-05, 0.00000000e+00,
-               2.66444185e-05, 1.97773712e-04, -3.87232634e-03,
-               -4.90267992e-01, -1.47563347e-04, -1.17809914e-01,
-               -5.40929019e-01 ]
+hidden_bias = [ 2.95232803e-01,  -1.23388522e-09,   0.00000000e+00,   0.00000000e+00,
+               0.00000000e+00,   0.00000000e+00,   2.25655539e-09,   0.00000000e+00,
+               2.17137873e-01,  -4.03572953e-09,   0.00000000e+00,   3.15902193e-10,
+               1.22724542e-09,   0.00000000e+00,   0.00000000e+00,   3.08106124e-01 ]
 
 # W2 10 hidden, 1 output
-hidden_output_weights = [[ 0.4027527], [  0.3184571], [  -0.3466984], [ 1.06400228],
-                         [ 0.30103049], [ 0.62229204], [ -1.05087543], [ 0.91520125],
-                         [ -0.23849073], [ -0.83612299 ]]
+hidden_output_weights =  [[ 0.3061325,   0.7249217 ],
+                          [ 0.82212615, -0.87020439],
+                          [-0.16003487,  0.05678433],
+                          [ 0.03079337,  0.03488749],
+                          [-0.12205628, -0.03029424],
+                          [-0.34037149, -0.16318902],
+                          [ 0.15318292, -1.06993532],
+                          [-0.17671171,  0.4517504 ],
+                          [-0.05496955,  0.47440329],
+                          [ 0.6847145,  -0.35256037],
+                          [-0.3802914,   0.24590087],
+                          [ 0.69478261, -0.19410631],
+                          [ 0.86003262, -0.41682884],
+                          [-0.32823354,  0.22413403],
+                          [ 0.57643712, -0.20763171],
+                          [ 0.09290985,  1.13164198]]
 
 # B2
-output_bias = [ -0.32433593 ]
+output_bias = [ -0.10707041,  0.33430237 ]
 
 W1 = numpy.array(input_hidden_weights)
 B1 = numpy.array(hidden_bias)
@@ -92,20 +106,20 @@ def backward_activation(z2):
   #
   # output to hidden layer
   #
-#
-# linear program
-# W2.a1 + B2 = z2
-# W1.x + B1 = z1
-#
-# W2.a1 - z2 = -B2
-# W1.x - z1 = -B1
-# a1 = g(z1) = relu(z1)
-# unknowns are a1[10], x[2]
-# B is -B2 concat -B1 (1 concat 10)
-# top row of A is W2.T
-# next ten rows are zeroes except diagonals are -1 (for -z1)
-# bottom right corner is 2x10 weights W1
-#
+  #
+  # linear program
+  # W2.a1 + B2 = z2
+  # W1.x + B1 = z1
+  #
+  # W2.a1 - z2 = -B2
+  # W1.x - z1 = -B1
+  # a1 = g(z1) = relu(z1)
+  # unknowns are a1[10], x[2]
+  # B is -B2 concat -B1 (1 concat 10)
+  # top row of A is W2.T
+  # next ten rows are zeroes except diagonals are -1 (for -z1)
+  # bottom right corner is 2x10 weights W1
+  #
   _topLeft = W2.T
   _bottomLeft = numpy.zeros((10, 10))
   for i in range(10):
@@ -121,11 +135,11 @@ def backward_activation(z2):
   print("b_eq", b_eq)
   result = optimize.linprog(c, A_eq=A_eq, b_eq=b_eq)
   print("linprog result", result)
-# problem this is a nonsquare matrix we are missing one constraint
-# linprog cannot find a feasible solution
-# add one more constract z2=...
-# now it is a square matrix solve by elimination
-#
+  # problem this is a nonsquare matrix we are missing one constraint
+  # linprog cannot find a feasible solution
+  # add one more constract z2=...
+  # now it is a square matrix solve by elimination
+  #
   print("gZ1", gZ1)
   print("gX", gX)
   u = numpy.concatenate((gZ1, gX), axis=1)
@@ -148,7 +162,7 @@ for case in cases:
   print("**** case ", case, " ****")
   print("")
   z2 = forward_activation(case)
-  x = backward_activation(z2)
+#x = backward_activation(z2)
 #print("case", case, "x", x)
 
 

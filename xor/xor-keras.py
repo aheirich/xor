@@ -13,16 +13,17 @@ model = Sequential()
 #model.add(Dense(2, input_dim=2, activation='sigmoid'))
 #model.add(Dense(2, activation='sigmoid'))
 # relu 2x10 network
-model.add(Dense(10, input_dim=2, activation='relu'))
+model.add(Dense(16, input_dim=2, activation='relu'))
 model.add(Dense(2, activation='relu'))
 
 model.compile(loss='mean_squared_error',
               optimizer='adam',
               metrics=['binary_accuracy'])
 
-model.fit(training_data, target_data, nb_epoch=5000, verbose=2)
+numEpochs = 5000
+model.fit(training_data, target_data, nb_epoch=numEpochs, verbose=2)
 
-print model.predict(training_data).round()
+print model.predict(training_data)
 
 w01 = model.layers[0].get_weights()[0]
 b01 = model.layers[0].get_weights()[1]

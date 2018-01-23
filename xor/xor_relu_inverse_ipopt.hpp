@@ -10,9 +10,10 @@
 
 #include <stdio.h>
 #include "IpStdCInterface.h"
+#include "IpIpoptApplication.hpp"
 
 const unsigned numInputUnits = 2;
-const unsigned numHiddenUnits = 10;
+const unsigned numHiddenUnits = 16;
 const unsigned numOutputUnits = 2;
 const unsigned numActivations = numInputUnits + numHiddenUnits + numOutputUnits;
 const unsigned numAlpha = numInputUnits + numHiddenUnits;

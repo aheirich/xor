@@ -18,7 +18,7 @@ const unsigned numOutputUnits = 2;
 const unsigned numActivations = numInputUnits + numHiddenUnits + numOutputUnits;
 const unsigned numAlpha = numInputUnits + numHiddenUnits;
 const unsigned numUnknowns = numActivations + numAlpha;
-const unsigned constraintsPerAlpha = 5;
+const unsigned constraintsPerAlpha = 3;
 const unsigned numConstraints = constraintsPerAlpha * numAlpha;
 
 /* This is an example how user_data can be used. */

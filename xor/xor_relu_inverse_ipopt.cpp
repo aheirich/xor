@@ -214,18 +214,16 @@ int main()
   /* set the values of the constraint bounds */
   // to enforce a constraint g(x) <= 0 set g_L=-k, g_U=0
   // to enforce an equality constraint g(x) = 0 set g_L=g_U=0
-  const Number lowerConstraintBound = 100;
+  const Number lowerConstraintBound = -100;
   for(unsigned i = 0; i < m; ++i) {
     g_U[i] = 0;
     switch(i % constraintsPerAlpha) {
-      case 0: // -alpha2_0 z2_0 <= 0
-      case 2: // (1-alpha2_0) (W2 z1 + b2)_0 <= 0
-      case 3: // (1-alpha2_0) z2_0 <= 0
+      case 0:
+      case 2:
         g_L[i] = 0;
         break;
-      case 1: // alpha2_0 (W2 z1 + b2 - z2)_0 = 0
-      case 4: // alpha2_0 (1-alpha2_0) = 0
-        g_L[i] = -lowerConstraintBound;
+      case 1:
+        g_L[i] = lowerConstraintBound;
         break;
       default: assert(false);
     }
@@ -495,6 +493,7 @@ Bool eval_grad_f(Index n, Number* x, Bool new_x,
 }
 
 
+#define FIVE_CONSTRAINTS 0
 
 
 Bool eval_g(Index n, Number* x, Bool new_x,
@@ -513,20 +512,28 @@ Bool eval_g(Index n, Number* x, Bool new_x,
   Number z2_computed[numOutputUnits];
   affine2(W2, z1, b2, z2_computed);
   for(unsigned i = 0; i < numOutputUnits; ++i) {
+#if FIVE_CONSTRAINTS
     *gNext++ = alpha2[i] * z2[i] * -1;
+#endif
     *gNext++ = alpha2[i] * (z2_computed[i] - z2[i]);
     *gNext++ = (1 - alpha2[i]) * z2_computed[i];
+#if FIVE_CONSTRAINTS
     *gNext++ = (1 - alpha2[i]) * z2[i];
+#endif
     *gNext++ = alpha2[i] * (1 - alpha2[i]);
   }
   
   Number z1_computed[numHiddenUnits];
   affine1(W1, z0, b1, z1_computed);
   for(unsigned i = 0; i < numHiddenUnits; ++i) {
+#if FIVE_CONSTRAINTS
     *gNext++ = alpha1[i] * z1[i] * -1;
+#endif
     *gNext++ = alpha1[i] * (z1_computed[i] - z1[i]);
     *gNext++ = (1 - alpha1[i]) * z1_computed[i];
+#if FIVE_CONSTRAINTS
     *gNext++ = (1 - alpha1[i]) * z1[i];
+#endif
     *gNext++ = alpha1[i] * (1 - alpha1[i]);
   }
   
@@ -535,15 +542,23 @@ Bool eval_g(Index n, Number* x, Bool new_x,
   for(unsigned i = 0; i < numOutputUnits; ++i) {
     std::cout << "alpha2_" << i << " = " << alpha2[i] << std::endl;
     if(alpha2[i] > 0.5) {
+#if FIVE_CONSTRAINTS
       std::cout << alpha2[i] << " * z2_" << i << " " << z2[i] << " * -1 = " << *gPtr++ << " <=? 0" << std::endl;
+#endif
       std::cout << alpha2[i] << " * (W2.z1+b2-z2)_" << i << " " << (z2_computed[i] - z2[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
       std::cout << (1 - alpha2[i]) << " * " << z2_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+#if FIVE_CONSTRAINTS
       std::cout << (1 - alpha2[i]) << " * " << z2[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+#endif
     } else {
+#if FIVE_CONSTRAINTS
       std::cout << alpha2[i] << " * " << z2[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+#endif
       std::cout << alpha2[i] << " * " << (z2_computed[i] - z2[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
       std::cout << (1 - alpha2[i]) << " * (W2.z1+b2) " << z2_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-      std::cout << (1 - alpha2[i]) << " * z2_" << i << " " << z2[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+#if FIVE_CONSTRAINTS
+     std::cout << (1 - alpha2[i]) << " * z2_" << i << " " << z2[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+#endif
     }
     std::cout << alpha2[i] << " * (1 - " << alpha2[i] << ") = " << alpha2[i] * (1 - alpha2[i]) << " =? 0" << std::endl;
   }
@@ -554,15 +569,23 @@ Bool eval_g(Index n, Number* x, Bool new_x,
   for(unsigned i = 0; i < numOutputUnits; ++i) {
     std::cout << "alpha1_" << i << " = " << alpha1[i] << std::endl;
     if(alpha1[i] > 0.5) {
+#if FIVE_CONSTRAINTS
       std::cout << alpha1[i] << " * z1_" << i << " " << z1[i] << " * -1 = " << *gPtr++ << " <=? 0" << std::endl;
+#endif
       std::cout << alpha1[i] << " * (W1.z0+b1-z1)_" << i << " " << (z1_computed[i] - z1[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
       std::cout << (1 - alpha1[i]) << " * " << z1_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+#if FIVE_CONSTRAINTS
       std::cout << (1 - alpha1[i]) << " * " << z1[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+#endif
     } else {
-      std::cout << alpha1[i] << " * " << z1[i] << " * -1 = " << *gPtr++ << " <=? 0" << std::endl;
+#if FIVE_CONSTRAINTS
+     std::cout << alpha1[i] << " * " << z1[i] << " * -1 = " << *gPtr++ << " <=? 0" << std::endl;
+#endif
       std::cout << alpha1[i] << " * " << (z1_computed[i] - z1[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
       std::cout << (1 - alpha1[i]) << " * (W1.z0+b1) " << z1_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+#if FIVE_CONSTRAINTS
       std::cout << (1 - alpha1[i]) << " * z1_" << i << " " << z1[i] << " = " << *gPtr++ << " =? 0" << std::endl;
+#endif
     }
     std::cout << alpha1[i] << " * (1 - " << alpha1[i] << ") = " << alpha1[i] * (1 - alpha1[i]) << " =? 0" << std::endl;
   }
@@ -577,6 +600,9 @@ Bool eval_g(Index n, Number* x, Bool new_x,
 void generateConstraintJacobian(Number* values, unsigned& numPoints, bool layer2, unsigned numUnits, Number* z, Number* z_computed, Number* alpha) {
   
   for(unsigned unit = 0; unit < numUnits; ++unit) {
+    
+#if FIVE_CONSTRAINTS
+
     ///// g[0] /////
     
     // d g[0] / d z2
@@ -626,6 +652,8 @@ void generateConstraintJacobian(Number* values, unsigned& numPoints, bool layer2
     }
     
     assert(numPoints % numUnknowns == 0);
+    
+#endif
 
     
     ///// g[1] /////
@@ -737,6 +765,8 @@ void generateConstraintJacobian(Number* values, unsigned& numPoints, bool layer2
     
     assert(numPoints % numUnknowns == 0);
     
+#if FIVE_CONSTRAINTS
+
     ///// g[3] /////
     
     // d g[3] / d z2
@@ -786,6 +816,8 @@ void generateConstraintJacobian(Number* values, unsigned& numPoints, bool layer2
     }
     
     assert(numPoints % numUnknowns == 0);
+    
+#endif
     
     ///// g[4] /////
     

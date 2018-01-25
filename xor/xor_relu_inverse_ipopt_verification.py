@@ -10,26 +10,26 @@ x = []
 for i in range(38):
   x.append(0)
 
-x[0] = 1.969795e+00
-x[1] = 1.900201e+00
-x[2] = 3.045930e+00
-x[3] = 1.340632e+00
-x[4] = 2.713718e+00
-x[5] = 1.482952e+00
-x[6] = 3.716245e+00
-x[7] = 1.929109e+00
-x[8] = 1.411427e+00
-x[9] = 2.809188e+00
-x[10] = 1.178817e+00
-x[11] = 1.953307e+00
-x[12] = 2.603998e+00
-x[13] = 9.728180e-01
-x[14] = -2.878036e-01
-x[15] = 1.449825e+00
-x[16] = 2.642583e+00
-x[17] = 6.793623e-01
-x[18] = -4.994467e+00
-x[19] = -2.456467e+00
+x[0] = 2.499838e+00
+x[1] = 1.760863e+00
+x[2] = 2.409611e+00
+x[3] = 2.482001e+00
+x[4] = 2.259150e+00
+x[5] = 9.853600e-01
+x[6] = 2.524106e+00
+x[7] = 1.649710e+00
+x[8] = 2.613006e+00
+x[9] = 2.012143e+00
+x[10] = 4.774024e+00
+x[11] = 3.616278e+00
+x[12] = 2.271486e+00
+x[13] = -6.132143e-01
+x[14] = -1.247891e+00
+x[15] = 1.347907e+00
+x[16] = 2.460233e+00
+x[17] = 1.705945e+00
+x[18] = -4.996765e+00
+x[19] = -2.981081e-01
 x[20] = 1.000000e+00
 x[21] = 1.000000e+00
 x[22] = 1.000000e+00
@@ -40,11 +40,11 @@ x[26] = 1.000000e+00
 x[27] = 1.000000e+00
 x[28] = 1.000000e+00
 x[29] = 1.000000e+00
-x[30] = 5.196138e-10
+x[30] = -1.206045e-17
 x[31] = 1.000000e+00
 x[32] = 1.000000e+00
-x[33] = -9.779487e-10
-x[34] = 1.711978e-11
+x[33] = -2.629307e-12
+x[34] = 7.274952e-12
 x[35] = 1.000000e+00
 x[36] = 1.000000e+00
 x[37] = 1.000000e+00
@@ -60,6 +60,17 @@ z1 = numpy.array(x[numOutputUnits : numOutputUnits + numHiddenUnits])
 z0 = numpy.array(x[numOutputUnits + numHiddenUnits : numActivations])
 alpha2 = numpy.array(x[numActivations : numActivations + numOutputUnits])
 alpha1 = numpy.array(x[numActivations + numOutputUnits : numActivations + numOutputUnits + numHiddenUnits])
+
+
+use_initial_conditions = False
+if use_initial_conditions:
+  ### initial z, alpha
+  z2 = numpy.array([1, 1.19367e-07])
+  z1 = numpy.array([-0.110302, -0.528237, -0.43953, -0.183434, -0.472166, -0.322412, -0.556118, -0.380633, 0.264893, -0.769642, -0.445372, 0.586461, 0.830397, -0.266922, -0.487294, 6.24e-07])
+  z0 = numpy.array([1, 0])
+
+
+
 
 print "Z2:", z2
 print "Z1:", z1
@@ -115,7 +126,7 @@ print "W1:", W1
 print "B1:", B1
 
 
-# compute forward activagtion
+# compute forward activation
 
 z1_ = numpy.matmul(numpy.transpose(z0), W1)
 zz1 = z1_ + B1

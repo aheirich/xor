@@ -12,15 +12,16 @@
 #include <math.h>
 #include <cstring>
 
+// Model trained using Keras/Tensorflow with Relu units
 
 // input weights to hidden layer
 Number W1[numInputUnits][numHiddenUnits] = {
   { -0.4055348,  -0.52823716, -0.43952978, -0.18343377, -0.47216558, -0.32241216,
-     -0.55611771, -0.38063344,  0.04775526, -0.76964206, -0.44537184,  0.58646101,
-     0.83039683, -0.26692185, -0.48729387, -0.3081055 },
-     {-0.29524794,  0.52825111, -0.21107587, -0.23073712, -0.55283833, -0.12979296,
-     0.55611771, -0.36968827,  0.00462923,  0.76966035, -0.15453213, -0.58635885,
-     -0.83039653, -0.04750431, -0.08500406,  0.4753032 }};
+    -0.55611771, -0.38063344,  0.04775526, -0.76964206, -0.44537184,  0.58646101,
+    0.83039683, -0.26692185, -0.48729387, -0.3081055 },
+  {-0.29524794,  0.52825111, -0.21107587, -0.23073712, -0.55283833, -0.12979296,
+    0.55611771, -0.36968827,  0.00462923,  0.76966035, -0.15453213, -0.58635885,
+    -0.83039653, -0.04750431, -0.08500406,  0.4753032 }};
 // hidden layer biases
 Number b1[numHiddenUnits] =
 { 2.95232803e-01,  -1.23388522e-09,   0.00000000e+00,   0.00000000e+00,
@@ -56,66 +57,78 @@ Number b2[numOutputUnits] = {-0.10707041,  0.33430237};
  * W a + b <= z   if z == 0
  *
  * implement this as a set of constraints with boolean variable alpha
- * alpha(W a + b) = z       if z > 0 and alpha == 1
- * (1-alpha)(W a + b) <= z  if z == 0 and alpha == 0
+ * alpha * z >= 0           if z >= 0 and alpha == 1
+ * alpha(W a + b - z) = 0   if z > 0 and alpha == 1
+ * (1-alpha)(W a + b) <= 0  if z == 0 and alpha == 0
+ * (1-alpha) z <= 0         consistent with Relu(z)=0
  * alpha(1 - alpha) = 0     ensure alpha is 0 or 1
  *
  * if the solver chooses a solution where alpha == 1 that means
+ * z >= 0
  * W a + b = z
- * 0 <= z
+ * 0 <= 0
+ * 0 <= 0
+ * 0 = 0
  * which is valid no matter what, since z==0 is acceptable
  * if the solver chooses a solution where alpha == 0 that means
- * 0 = z
- * W a + b <= z
+ * 0 >= 0
+ * 0 = 0
+ * W a + b <= 0
+ * z <= 0
+ * 0 = 0
  *
  * NLP problem: minimize f(x) s.t. gL <= g(x) <= gU and xL <= x <= xU
+ * f(x) represents the distance from the target output
+ *    = sum_i ( Relu(z2_i) - a2_i )^2   where a2 is the target activations
  *
- * f(x) = sum_i (a_o,i - a'_o,i)^2 where a' is the given target activation, a is computed from the unknowns
+ * In order for this to be differentiable we use the following definition of Relu:
+ * Relu(x) = x / (1 + e^-kx)
+ * d Relu(x) / d x = 2 e^2kx (kx + e^kx + 1) / (e^kx + 1)^3
+ * use k=1000
  *
- * alpha (W a + b) = alpha(z)
- * alpha_l (W_l . a_l + b_l - z_l) = 0
- * gL = gU = 0
- *
- * (1-alpha_l) (W_l . a_l + b_l - z_l) <= 0
- * gU = 0
- * gL can be bounded by the product of weights and activations, max activation is a recursive function back to layer 0 and max input value
+ * gU can be bounded by the product of weights and activations, max activation is a recursive function back to layer 0 and max input value
  * network has an expansion/contraction ratio like an eigenvalue, tells how much the activation can grow across levels assuming weights are bounded at 1
- * propose this as a network measure, relate this to the max activation that bounds gL in this case
- *
- * alpha_l (1 - alpha_l) = 0
- * gL = gU = 0
+ * use this as a network measure, relate this to the max activation that bounds gL in this case
  *
  
  * Order of unknowns:
  * Z2 (2)
- * Z1 (10)
+ * Z1 (16)
  * Z0 (2)
  * alpha2 (2)
- * alpha1 (10)
+ * alpha1 (16)
  
  * Order of constraints:
  
+ * alpha2_0 z2_0 >= 0
  * alpha2_0 (W2 z1 + b2 - z2)_0 = 0
- * (1 - alpha2_0) (W2 z1 + b2 - z2)_0 <= 0
- * alpha2_0 ( 1 - alpha2_0 ) = 0
+ * (1-alpha2_0) (W2 z1 + b2)_0 <= 0
+ * (1-alpha2_0) z2_0 <= 0
+ * alpha2_0 (1-alpha2_0) = 0
  
+ * alpha2_1 z2_1 >= 0
  * alpha2_1 (W2 a1 + b2 - z2)_1 = 0
- * (1 - alpha2_1) (W2 a1 + b2 - z2)_1 <= 0
- * alpha2_1 ( 1 - alpha2_1 ) = 0
+ * (1-alpha2_1) (W2 a1 + b2)_1 <= 0
+ * (1-alpha2_1) z2_1 <= 0
+ * alpha2_1 (1-alpha2_1) = 0
  
+ * alpha1_0 z1_0 >= 0
  * alpha1_0 (W1 z0 + b1 - z1)_0 = 0
- * (1 - alpha1_0) (W1 z0 + b1 -z1)_0 <= 0
- * alpha1_0 ( 1 - alpha1_0 ) = 0
+ * (1-alpha1_0) (W1 z0 + b1)_0 <= 0
+ * (1-alpha1_0) z1_0 <= 0
+ * alpha1_0 (1-alpha1_0) = 0
  
  * ...
+ * alpha1_i z1_i >= 0
  * alpha1_i (W1 z0 + b1 - z1)_i = 0
- * (1 - alpha1_i) (W1 z0 + b1 -z1)_i <= 0
- * alpha1_i (1 - alpha1_i) = 0
+ * (1-alpha1_i) (W1 z0 + b1)_i <= 0
+ * (1-alpha1_i) z1_i <= 0
+ * alpha1_i (1-alpha1_i) = 0
  
  */
 
 
-void computeInitialValues(Number* x) {
+void initializeAtAFixedPoint(Number* x) {
   // case 1,0
   // initialize Z to a known solution
   Number z2_10[] = {
@@ -168,10 +181,7 @@ int main()
   Number obj;                          /* objective value */
   Index i;                             /* generic counter */
   
-  //Ipopt::SmartPtr<Ipopt::IpoptApplication> app = IpoptApplicationFactory();
-  //app->Options()->SetStringValue("hessian_approximation", "limited-memory");
 
-  
   /* Number of nonzeros in the Jacobian of the constraints */
   Index nele_jac = numConstraints * numUnknowns;
   /* Number of nonzeros in the Hessian of the Lagrangian (lower or
@@ -202,11 +212,13 @@ int main()
   
   /* set the values of the constraint bounds */
   for(unsigned i = 0; i < m; ++i) {
-    g_U[i] = 0;
-    if(i % 3 == 1) {//inequality constraint
-      g_L[i] = -10.0;
+    g_L[i] = 0;
+    if(i % constraintsPerAlpha == 1 || i % constraintsPerAlpha == 4) {
+      //equality constraint
+      g_U[i] = 0.0;
     } else {
-      g_L[i] = 0;
+      // inequality constraint
+      g_U[i] = 100.0;
     }
   }
   
@@ -223,20 +235,21 @@ int main()
   free(g_U);
   
   /* Set some options. */
-//  AddIpoptStrOption(nlp, (char*)"output_file", (char*)"ipopt.out");
+  //  AddIpoptStrOption(nlp, (char*)"output_file", (char*)"ipopt.out");
   AddIpoptStrOption(nlp, (char*)"hessian_approximation", (char*)"limited-memory");
-
+  
   /* allocate space for the initial point and set the values */
   x = (Number*)calloc(n, sizeof(Number));
-  computeInitialValues(x);
+  initializeAtAFixedPoint(x);
   
-
+  
   /* allocate space to store the bound multipliers at the solution */
   mult_g = (Number*)malloc(sizeof(Number)*m);
   mult_x_L = (Number*)malloc(sizeof(Number)*n);
   mult_x_U = (Number*)malloc(sizeof(Number)*n);
   
   /* Initialize the user data with the value of the network output layer. */
+  // output [1,0] inputs are [1,0] or [0,1]
   user_data.ao_target[0] = 1.0;
   user_data.ao_target[1] = 0.0;
   
@@ -289,8 +302,24 @@ int main()
 
 /* Function Implementations */
 
+// differentiable Relu operator
+
+const Number steepness = 1000;
+
 Number Relu(Number x) {
-  return fmax(x, 0);//can we make this differentiable using Dirac delta?
+  return x / (1 + exp(-steepness * x));
+}
+
+
+
+Number dRelu_dx(Number x) {
+  return
+  (2 * exp(2 * steepness * x) * (steepness * x + exp(steepness * x) + 1))
+  /
+  pow((exp(steepness * x) + 1), 3);
+  
+  // derivative by WolframAlpha
+  //(2 x e^(2 k x) (k x + e^(k x) + 1))/(e^(k x) + 1)^3
 }
 
 
@@ -308,23 +337,6 @@ void affine1(Number W1[numInputUnits][numHiddenUnits],
   }
 }
 
-void activation1(Number W1[numInputUnits][numHiddenUnits],
-                 Number z0[numInputUnits],
-                 Number b1[numHiddenUnits],
-                 Number a1[numHiddenUnits])
-{
-  Number z1[numHiddenUnits];
-  for(unsigned i = 0; i < numHiddenUnits; ++i) {
-    z1[i] = 0;
-    for(unsigned j = 0; j < numInputUnits; ++j) {
-      z1[i] += W1[j][i] * Relu(z0[j]);
-    }
-    z1[i] += b1[i];
-  }
-  for(unsigned i = 0; i < numHiddenUnits; ++i) {
-    a1[i] = Relu(z1[i]);
-  }
-}
 
 
 void affine2(Number W2[numHiddenUnits][numOutputUnits],
@@ -368,26 +380,31 @@ void printUnknowns(Number* x) {
   Number* alpha2 = z0 + numInputUnits;
   Number* alpha1 = alpha2 + numOutputUnits;
   std::cout << "=== iteration " << iteration++ << "===" << std::endl;
+  
   std::cout << "z2: ";
   for(unsigned i = 0; i < numOutputUnits; ++i) {
     std::cout << z2[i] << " ";
   }
   std::cout << std::endl;
+  
   std::cout << "z1: ";
   for(unsigned i = 0; i < numHiddenUnits; ++i) {
     std::cout << z1[i] << " ";
   }
   std::cout << std::endl;
+  
   std::cout << "z0: ";
   for(unsigned i = 0; i < numInputUnits; ++i) {
     std::cout << z0[i] << " ";
   }
   std::cout << std::endl;
+  
   std::cout << "alpha2: ";
   for(unsigned i = 0; i < numOutputUnits; ++i) {
     std::cout << alpha2[i] << " ";
   }
   std::cout << std::endl;
+  
   std::cout << "alpha1: ";
   for(unsigned i = 0; i < numHiddenUnits; ++i) {
     std::cout << alpha1[i] << " ";
@@ -422,18 +439,35 @@ Bool eval_f(Index n, Number* x, Bool new_x,
 }
 
 
-// gradient of f
+// gradient of f by WolframAlpha
+/*
+ * grad((x/(e^(-k x) + 1) - a)^2 + (y/(e^(-k y) + 1) - b)^2) =
+ * (-(2 e^(k x) (k x + e^(k x) + 1) (a e^(k x) + a - x e^(k x)))/(e^(k x) + 1)^3,
+ * -(2 e^(k y) (k y + e^(k y) + 1) (b e^(k y) + b - y e^(k y)))/(e^(k y) + 1)^3)
+ *
+ * f = sum_i ( Relu(W2.z1+b2)_i - ao_i )^2
+ *
+ * grad_f = 2 e^2k k ( k + e^k + 1 ) / ( e^k + 1 )^3
+ *
+ */
 
 Bool eval_grad_f(Index n, Number* x, Bool new_x,
                  Number* grad_f, UserDataPtr user_data)
 {
   assert(n == numUnknowns);
-  struct MyUserData* data = (struct MyUserData*)user_data;
-  Number* a_o_target = data->ao_target;
-  Number* z_o = x;
-  std::cout << "grad F: ";
+  Number* z1 = x + numInputUnits;
+  Number a_o_computed[numOutputUnits];
+  activation2(W2, z1, b2, a_o_computed);
+  MyUserData* myUserData = (MyUserData*)user_data;
+  Number* a_o = myUserData->ao_target;
+  std::cout << "grad f: ";
   for(unsigned i = 0; i < numOutputUnits; ++i) {
-    grad_f[i] = 2 * (Relu(z_o[i]) - a_o_target[i]);
+    Number x = a_o_computed[i];
+    Number k = steepness;
+    grad_f[i] = -(2 * exp(k * x) * (k * x + exp(k * x) + 1)
+                  * (a_o[i] * exp(k * x) + a_o[i] - x * exp(k * x)))
+    /
+    pow(exp(k * x) + 1, 3);
     std::cout << grad_f[i] << " ";
   }
   std::cout << std::endl;
@@ -441,11 +475,6 @@ Bool eval_grad_f(Index n, Number* x, Bool new_x,
 }
 
 
-/* constraints g
- * alpha_l (W_l . a_l + b_l - z_l) = 0
- * (1-alpha_l) (W_l . a_l + b_l - z_l) <= 0
- * alpha_l (1 - alpha_l) = 0
- */
 
 
 Bool eval_g(Index n, Number* x, Bool new_x,
@@ -464,30 +493,60 @@ Bool eval_g(Index n, Number* x, Bool new_x,
   Number z2_computed[numOutputUnits];
   affine2(W2, z1, b2, z2_computed);
   for(unsigned i = 0; i < numOutputUnits; ++i) {
-    *gNext++ = alpha2[i] * (z2_computed[i] - z2[i]); // == z if z > 0
-    *gNext++ = (1 - alpha2[i]) * z2_computed[i]; // <= z if z == 0
+    *gNext++ = alpha2[i] * z2[i];
+    *gNext++ = alpha2[i] * (z2_computed[i] - z2[i]);
+    *gNext++ = (1 - alpha2[i]) * z2_computed[i] * -1;
+    *gNext++ = (1 - alpha2[i]) * z2[i] * -1;
     *gNext++ = alpha2[i] * (1 - alpha2[i]);
   }
   
   Number z1_computed[numHiddenUnits];
   affine1(W1, z0, b1, z1_computed);
   for(unsigned i = 0; i < numHiddenUnits; ++i) {
-    *gNext++ = alpha1[i] * (z1_computed[i] - z1[i]); // == z if z > 0
-    *gNext++ = (1 - alpha1[i]) * z1_computed[i]; // <= z if z == 0
+    *gNext++ = alpha1[i] * z1[i];
+    *gNext++ = alpha1[i] * (z1_computed[i] - z1[i]);
+    *gNext++ = (1 - alpha1[i]) * z1_computed[i] * -1;
+    *gNext++ = (1 - alpha1[i]) * z1[i] * -1;
     *gNext++ = alpha1[i] * (1 - alpha1[i]);
   }
   
-  std::cout << "constraints g, z2: ";
+  Number* gPtr = g;
+  std::cout << std::endl << "constraints for z2:" << std::endl;
   for(unsigned i = 0; i < numOutputUnits; ++i) {
-    std::cout << g[i] << " ";
+    std::cout << "alpha2_" << i << " = " << alpha2[i] << std::endl;
+    if(alpha2[i] > 0.5) {
+      std::cout << alpha2[i] << " * z2_" << i << " " << z2[i] << " = " << *gPtr++ << " >=? 0" << std::endl;
+      std::cout << alpha2[i] << " * (W2.z1+b2-z2)_" << i << " " << (z2_computed[i] - z2[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
+      std::cout << (1 - alpha2[i]) << " * " << z2_computed[i] << " * -1 = " << *gPtr++ << " >=? 0" << std::endl;
+      std::cout << (1 - alpha2[i]) << " * " << z2[i] << " * -1 = " << *gPtr++ << " >=? 0" << std::endl;
+    } else {
+      std::cout << alpha2[i] << z2[i] << " = " << *gPtr++ << " >=? 0" << std::endl;
+      std::cout << alpha2[i] << " * " << (z2_computed[i] - z2[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
+      std::cout << (1 - alpha2[i]) << " * (W2.z1+b2) " << z2_computed[i] << " * -1 = " << *gPtr++ << " >=? 0" << std::endl;
+      std::cout << (1 - alpha2[i]) << " * z2_" << i << " " << z2[i] << " * -1 = " << *gPtr++ << " >=? 0" << std::endl;
+    }
+    std::cout << alpha2[i] << " * (1 - " << alpha2[i] << ") = " << alpha2[i] * (1 - alpha2[i]) << " =? 0" << std::endl;
   }
-  std::cout << std::endl;
-  std::cout << "constraints g, z1: ";
-  for(unsigned i = 0; i < numHiddenUnits; ++i) {
-    std::cout << g[i + numOutputUnits] << " ";
+  
+  
+  std::cout << std::endl << "constraints for z1:" << std::endl;
+  for(unsigned i = 0; i < numOutputUnits; ++i) {
+    std::cout << "alpha1_" << i << " = " << alpha1[i] << std::endl;
+    if(alpha1[i] > 0.5) {
+      std::cout << alpha1[i] << " * z1_" << i << " " << z1[i] << " = " << *gPtr++ << " >=? 0" << std::endl;
+      std::cout << alpha1[i] << " * (W1.z0+b1-z1)_" << i << " " << (z1_computed[i] - z1[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
+      std::cout << (1 - alpha1[i]) << " * " << z1_computed[i] << " * -1 = " << *gPtr++ << " >=? 0" << std::endl;
+      std::cout << (1 - alpha1[i]) << " * " << z1[i] << " * -1 = " << *gPtr++ << " >=? 0" << std::endl;
+    } else {
+      std::cout << alpha1[i] << z1[i] << " = " << *gPtr++ << " >=? 0" << std::endl;
+      std::cout << alpha1[i] << " * " << (z1_computed[i] - z1[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
+      std::cout << (1 - alpha1[i]) << " * (W1.z0+b1) " << z1_computed[i] << " * -1 = " << *gPtr++ << " >=? 0" << std::endl;
+      std::cout << (1 - alpha1[i]) << " * z1_" << i << " " << z1[i] << " * -1 = " << *gPtr++ << " >=? 0" << std::endl;
+    }
+    std::cout << alpha1[i] << " * (1 - " << alpha1[i] << ") = " << alpha1[i] * (1 - alpha1[i]) << " =? 0" << std::endl;
   }
-  std::cout << std::endl;
 
+  
   return TRUE;
 }
 
@@ -541,48 +600,51 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     
     // d g[0] / d z2
     
-    values[numPoints++] = alpha2[0] * -1;
-    values[numPoints++] = 0;
-    assert(numOutputUnits == 2);
+    values[numPoints++] = alpha2[0];
+    for(unsigned i = 1; i < numOutputUnits; i++) {
+      values[numPoints++] = 0;
+    }
     
     // d g[0] / d z1
     
-    for(unsigned j = 0; j < numHiddenUnits; ++j) {
-      values[numPoints++] = alpha2[0] * W2[j][0];
+    for(unsigned i = 0; i < numHiddenUnits; i++) {
+      values[numPoints++] = 0;
     }
     
     // d g[0] / d z0
     
-    for(unsigned i = 0; i < numInputUnits; ++i) {
+    for(unsigned i = 0; i < numInputUnits; i++) {
       values[numPoints++] = 0;
     }
     
     // d g[0] / d alpha2
     
-    values[numPoints++] = z2_computed[0] - z2[0];
-    values[numPoints++] = 0;
-    assert(numOutputUnits == 2);
+    values[numPoints++] = z2[0];
+    for(unsigned i = 1; i < numOutputUnits; i++) {
+      values[numPoints++] = 0;
+    }
     
     // d g[0] / d alpha1
     
-    for(unsigned i = 0; i < numHiddenUnits; ++i) {
+    for(unsigned i = 0; i < numHiddenUnits; i++) {
       values[numPoints++] = 0;
     }
-      
-    assert(numPoints == numUnknowns);
-    
+
+    assert(numPoints % numUnknowns == 0);
+
     ///// g[1] /////
-    
+
     // d g[1] / d z2
     
-    values[numPoints++] = 0;
-    values[numPoints++] = 0;
-    assert(numOutputUnits == 2);
-    
+    values[numPoints++] = alpha2[0] * -1;
+    for(unsigned i = 1; i < numOutputUnits; i++) {
+      values[numPoints++] = 0;
+    }
+
     // d g[1] / d z1
     
     for(unsigned j = 0; j < numHiddenUnits; ++j) {
-      values[numPoints++] = -1 * alpha2[0] * W2[j][0];
+      values[numPoints++] = alpha2[0] * W2[j][0];
     }
     
     // d g[1] / d z0
@@ -593,10 +655,11 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     
     // d g[1] / d alpha2
     
-    values[numPoints++] = -1 * z2_computed[0];
-    values[numPoints++] = 0;
-    assert(numOutputUnits == 2);
-    
+    values[numPoints++] = z2_computed[0] - z2[0];
+    for(unsigned i = 1; i < numOutputUnits; i++) {
+      values[numPoints++] = 0;
+    }
+
     // d g[1] / d alpha1
     
     for(unsigned i = 0; i < numHiddenUnits; ++i) {
@@ -605,21 +668,33 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     
     assert(numPoints % numUnknowns == 0);
     
-    
     ///// g[2] /////
     
-    // d g[2]  d z*
+    // d g[2] / d z2
     
-    for(unsigned i = 0; i < numActivations; ++i) {
+    for(unsigned i = 0; i < numOutputUnits; i++) {
+      values[numPoints++] = 0;
+    }
+
+    // d g[2] / d z1
+    
+    for(unsigned j = 0; j < numHiddenUnits; ++j) {
+      values[numPoints++] = (1 - alpha2[0]) * W2[j][0];
+    }
+    
+    // d g[2] / d z0
+    
+    for(unsigned i = 0; i < numInputUnits; ++i) {
       values[numPoints++] = 0;
     }
     
     // d g[2] / d alpha2
     
-    values[numPoints++] = 1 - 2 * alpha2[0];
-    values[numPoints++] = 0;
-    assert(numOutputUnits == 2);
-    
+    values[numPoints++] = -1 * z2_computed[0] * -1;
+    for(unsigned i = 1; i < numOutputUnits; i++) {
+      values[numPoints++] = 0;
+    }
+
     // d g[2] / d alpha1
     
     for(unsigned i = 0; i < numHiddenUnits; ++i) {
@@ -628,35 +703,28 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     
     assert(numPoints % numUnknowns == 0);
     
-
-    
     
     ///// g[3] /////
     
     // d g[3] / d z2
     
-    values[numPoints++] = 0;
-    values[numPoints++] = alpha2[1] * -1;
-    assert(numOutputUnits == 2);
-    
-    // d g[3] / d z1
-    
-    for(unsigned j = 0; j < numHiddenUnits; ++j) {
-      values[numPoints++] = alpha2[1] * W2[j][1];
+    values[numPoints++] = (1 - alpha2[0]) * -1;
+    for(unsigned i = 1; i < numOutputUnits; i++) {
+      values[numPoints++] = 0;
     }
-    
-    // d g[3] / d z0
-    
-    for(unsigned i = 0; i < numInputUnits; ++i) {
+
+    // d g[3] / d z1, d z0
+    for(unsigned i = 0; i < numHiddenUnits + numInputUnits; ++i) {
       values[numPoints++] = 0;
     }
     
     // d g[3] / d alpha2
     
-    values[numPoints++] = 0;
-    values[numPoints++] = z2_computed[1] - z2[1];
-    assert(numOutputUnits == 2);
-    
+    values[numPoints++] = -z2[0] * -1;
+    for(unsigned i = 1; i < numOutputUnits; i++) {
+      values[numPoints++] = 0;
+    }
+
     // d g[3] / d alpha1
     
     for(unsigned i = 0; i < numHiddenUnits; ++i) {
@@ -665,34 +733,21 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     
     assert(numPoints % numUnknowns == 0);
     
-
-    
     
     ///// g[4] /////
     
-    // d g[4] / d z2
+    // d g[4] / d z
     
-    values[numPoints++] = 0;
-    values[numPoints++] = 0;
-    assert(numOutputUnits == 2);
-
-    // d g[4] / d z1
-    
-    for(unsigned j = 0; j < numHiddenUnits; ++j) {
-      values[numPoints++] = -1 * alpha2[1] * W2[j][1];
-    }
-    
-    // d g[4] / d z0
-    
-    for(unsigned i = 0; i < numInputUnits; ++i) {
+    for(unsigned i = 0; i < numActivations; ++i) {
       values[numPoints++] = 0;
     }
     
     // d g[4] / d alpha2
     
-    values[numPoints++] = 0;
-    values[numPoints++] = -1 * z2_computed[1];
-    assert(numOutputUnits == 2);
+    values[numPoints++] = 1 - 2 * alpha2[0];
+    for(unsigned i = 1; i < numOutputUnits; i++) {
+      values[numPoints++] = 0;
+    }
 
     // d g[4] / d alpha1
     
@@ -701,23 +756,29 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     }
 
     
-    assert(numPoints % numUnknowns == 0);
-    
-
-    
     ///// g[5] /////
     
-    // d g[5]  d z*
+    // d g[5] / d z2
     
-    for(unsigned i = 0; i < numActivations; ++i) {
+    values[numPoints++] = 0;
+    values[numPoints++] = alpha2[1];
+    for(unsigned i = 2; i < numOutputUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+    
+    // d g[5] / d z1, d z0
+    
+    for(unsigned i = 0; i < numHiddenUnits + numInputUnits; ++i) {
       values[numPoints++] = 0;
     }
     
     // d g[5] / d alpha2
     
     values[numPoints++] = 0;
-    values[numPoints++] = 1 - 2 * alpha2[1];
-    assert(numOutputUnits == 2);
+    values[numPoints++] = z2[1];
+    for(unsigned i = 2; i < numOutputUnits; ++i) {
+      values[numPoints++] = 0;
+    }
 
     // d g[5] / d alpha1
     
@@ -726,24 +787,198 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
     }
 
     
+    
+    ///// g[6] /////
+
+    // d g[6] / d z2
+    
+    values[numPoints++] = 0;
+    values[numPoints++] = alpha2[1] * -1;
+    for(unsigned i = 2; i < numOutputUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+
+    // d g[6] / d z1
+    
+    for(unsigned j = 0; j < numHiddenUnits; ++j) {
+      values[numPoints++] = alpha2[1] * W2[j][1];
+    }
+    
+    // d g[6] / d z0
+    
+    for(unsigned i = 0; i < numInputUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+    
+    // d g[6] / d alpha2
+    
+    values[numPoints++] = 0;
+    values[numPoints++] = z2_computed[1] - z2[1];
+    for(unsigned i = 2; i < numOutputUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+
+    // d g[6] / d alpha1
+    
+    for(unsigned i = 0; i < numHiddenUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+    
     assert(numPoints % numUnknowns == 0);
     
+    
+    
+    
+    ///// g[7] /////
+    
+    // d g[7] / d z2
+    
+    for(unsigned i = 0; i < numOutputUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+    
+    // d g[7] / d z1
+    
+    for(unsigned j = 0; j < numHiddenUnits; ++j) {
+      values[numPoints++] = (1 - alpha2[1]) * W2[j][1] * -1;
+    }
+    
+    // d g[7] / d z0
+    
+    for(unsigned i = 0; i < numInputUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+    
+    // d g[7] / d alpha2
+    
+    values[numPoints++] = 0;
+    values[numPoints++] = -1 * z2_computed[1] * -1;
+    for(unsigned i = 2; i < numOutputUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+
+    // d g[7] / d alpha1
+    
+    for(unsigned i = 0; i < numHiddenUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+    
+    
+    assert(numPoints % numUnknowns == 0);
+    
+    ///// g[8] /////
+
+    // d g[8] / d z2
+    
+    values[numPoints++] = 0;
+    values[numPoints++] = (1 - alpha2[1]) * -1;
+    for(unsigned i = 2; i < numOutputUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+
+    // d g[8] / d z1, d z0
+    
+    for(unsigned i = 0; i < numHiddenUnits + numOutputUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+    
+    // d g[8] / d alpha2
+    
+    values[numPoints++] = 0;
+    values[numPoints++] = -z2[1] * -1;
+    for(unsigned i = 2; i < numOutputUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+
+    // d g[8] / d alpha1
+    
+    for(unsigned i = 0; i < numHiddenUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+
+    assert(numPoints % numUnknowns == 0);
 
     
-    ///// g[6..] /////
+    ///// g[9] /////
+    
+    // d g[9]  d z*
+    
+    for(unsigned i = 0; i < numActivations; ++i) {
+      values[numPoints++] = 0;
+    }
+    
+    // d g[9] / d alpha2
+    
+    values[numPoints++] = 0;
+    values[numPoints++] = 1 - 2 * alpha2[1];
+    for(unsigned i = 2; i < numOutputUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+
+    // d g[9] / d alpha1
+    
+    for(unsigned i = 0; i < numHiddenUnits; ++i) {
+      values[numPoints++] = 0;
+    }
+    
+    
+    assert(numPoints % numUnknowns == 0);
+    
+    
+    
+    ///// g[10..] /////
     
     Number z1_computed[numHiddenUnits];
     affine1(W1, z0, b1, z1_computed);
     
     for(unsigned unit = 0; unit < numHiddenUnits; ++unit) {
       
-      // d g[6] / d z2
- 
-      values[numPoints++] = 0;
-      values[numPoints++] = 0;
-      assert(numOutputUnits == 2);
+      ///// g[10] /////
 
-      // d g[6] / d z1
+      // d g[10] / d z2
+      
+      for(unsigned i = 0; i < numOutputUnits; ++i) {
+        values[numPoints++] = 0;
+      }
+
+      // d g[10] / d z1
+      
+      values[numPoints++] = alpha1[0];
+      for(unsigned i = 1; i < numHiddenUnits; ++i) {
+        values[numPoints++] = 0;
+      }
+      
+      // d g[10] / d z0
+      
+      for(unsigned i = 0; i < numInputUnits; ++i) {
+        values[numPoints++] = 0;
+      }
+      
+      // d g[10] / d alpha2
+      
+      for(unsigned i = 0; i < numOutputUnits; ++i) {
+        values[numPoints++] = 0;
+      }
+
+      // d g[10] / d alpha1
+      
+      values[numPoints++] = z1[0];
+      for(unsigned i = 1; i < numHiddenUnits; ++i) {
+        values[numPoints++] = 0;
+      }
+
+      assert(numPoints % numUnknowns == 0);
+
+      
+      ///// g[11] /////
+
+      // d g[11] / d z2
+      
+      for(unsigned i = 0; i < numOutputUnits; ++i) {
+        values[numPoints++] = 0;
+      }
+
+      // d g[11] / d z1
       
       for(unsigned i = 0; i < numHiddenUnits; ++i) {
         if(i == unit) {
@@ -753,73 +988,119 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
         }
       }
       
-      // d g[6] / d z0
+      // d g[11] / d z0
       
-      values[numPoints++] = alpha1[unit] * W1[0][unit];
-      values[numPoints++] = alpha1[unit] * W1[1][unit];
-      assert(numInputUnits == 2);
-
-      // d g[6] / d alpha2
+      for(unsigned j = 0; j < numInputUnits; ++j) {
+        values[numPoints++] = alpha1[unit] * W1[j][unit];
+      }
       
-      values[numPoints++] = 0;
-      values[numPoints++] = 0;
-      assert(numOutputUnits == 2);
+      // d g[11] / d alpha2
+      
+      for(unsigned i = 0; i < numOutputUnits; ++i) {
+        values[numPoints++] = 0;
+      }
 
-      // d g[6] / d alpha1
+      // d g[11] / d alpha1
       
       for(unsigned i = 0; i < numHiddenUnits; ++i) {
         if(i == unit) {
-          values[numPoints++] = z1_computed[i] - z1[i];
+          values[numPoints++] = z1_computed[unit] - z1[unit];
         } else {
           values[numPoints++] = 0;
         }
       }
-     
+      
       
       assert(numPoints % numUnknowns == 0);
       
+      ///// g[12] /////
 
       
-      // d g[7] / d z2
+      // d g[12] / d z2
       
-      values[numPoints++] = 0;
-      values[numPoints++] = 0;
-      assert(numOutputUnits == 2);
+      for(unsigned i = 0; i < numOutputUnits; ++i) {
+        values[numPoints++] = 0;
+      }
 
-      // d g[7] / d z1
+      // d g[12] / d z1
       
       for(unsigned i = 0; i < numHiddenUnits; ++i) {
         values[numPoints++] = 0;
       }
       
-      // d g[7] / d z0
+      // d g[12] / d z0
       
       for(unsigned i = 0; i < numInputUnits; ++i) {
-        values[numPoints++] = -1 * alpha1[unit] * W1[i][unit];
+        values[numPoints++] = -alpha1[unit] * W1[i][unit] * -1;
+      }
+      
+      // d g[12] / d alpha2
+      
+      for(unsigned i = 0; i < numOutputUnits; ++i) {
+        values[numPoints++] = 0;
       }
 
-      // d g[7] / d alpha2
+      // d g[12] / d alpha1
       
-      values[numPoints++] = 0;
-      values[numPoints++] = 0;
-      assert(numOutputUnits == 2);
-
-      // d g[7] / d alpha1
-
       for(unsigned i = 0; i < numHiddenUnits; ++i) {
         if(i == unit) {
-          values[numPoints++] = -1 * z1_computed[i];
+          values[numPoints++] = -z1_computed[unit] * -1;
+        } else {
+          values[numPoints++] = 0;
+        }
+      }
+      
+      
+      assert(numPoints % numUnknowns == 0);
+      
+      
+      ///// g[13] /////
+      
+      // d g[13] / d z2
+      
+      for(unsigned i = 0; i < numOutputUnits; ++i) {
+        values[numPoints++] = 0;
+      }
+
+      // d g[13] / d z1
+      
+      for(unsigned i = 0; i < numHiddenUnits; ++i) {
+        if(i == unit) {
+          values[numPoints++] = -alpha1[unit] * -1;
+        } else {
+          values[numPoints++] = 0;
+        }
+      }
+      
+      // d g[13] / d z0
+      
+      for(unsigned i = 0; i < numInputUnits; ++i) {
+        values[numPoints++] = 0;
+      }
+      
+      // d g[13] / d alpha2
+      
+      for(unsigned i = 0; i < numOutputUnits; ++i) {
+        values[numPoints++] = 0;
+      }
+
+      // d g[13] / d alpha1
+      
+      for(unsigned i = 0; i < numHiddenUnits; ++i) {
+        if(i == unit) {
+          values[numPoints++] = -z1[unit] * -1;
         } else {
           values[numPoints++] = 0;
         }
       }
 
-      
       assert(numPoints % numUnknowns == 0);
-      
 
       
-      // d g[8] / d z, d alpha2
+      ///// g[14] /////
+
+      
+      // d g[14] / d z, d alpha2
       
       for(unsigned i = 0; i < numActivations + numOutputUnits; ++i) {
         values[numPoints++] = 0;
@@ -834,13 +1115,13 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
           values[numPoints++] = 0;
         }
       }
-
+      
       assert(numPoints % numUnknowns == 0);
-
+      
     }
-
+    
     assert(numPoints == numUnknowns *  numConstraints);
-
+    
     std::cout << "Jacobian of constraint grad_g:" << std::endl;
     unsigned valuesIdx = 0;
     for(unsigned gIdx = 0; gIdx < numConstraints; ++gIdx) {
@@ -869,7 +1150,7 @@ Bool eval_h(Index n, Number *x, Bool new_x, Number obj_factor,
             Number *values, UserDataPtr user_data)
 {
   // we are using the quasi-newton approximation of second derivatives
-  // so we don't need to hessian of the lagrangian
+  // so we don't need the hessian of the lagrangian
   return FALSE;
 }
 

@@ -318,6 +318,7 @@
 					"\"$(SRCROOT)/../../ipopt/CoinIpopt/Ipopt/src/Interfaces\"/**",
 					"$(SRCROOT)/../../ipopt/CoinIpopt/Ipopt/src/Common/**",
 					"$(SRCROOT)/../../ipopt/CoinIpopt/Ipopt/src/LinAlg/**",
+					"/mnt/nfs/home/aheirich/Documents/Legion/software/machine_learning/crossMount/project/xor/xor/mpfr/**",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -332,6 +333,7 @@
 					"\"$(SRCROOT)/../../ipopt/CoinIpopt/Ipopt/src/Interfaces\"/**",
 					"$(SRCROOT)/../../ipopt/CoinIpopt/Ipopt/src/Common/**",
 					"$(SRCROOT)/../../ipopt/CoinIpopt/Ipopt/src/LinAlg/**",
+					"/mnt/nfs/home/aheirich/Documents/Legion/software/machine_learning/crossMount/project/xor/xor/mpfr/**",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_NAME = "$(TARGET_NAME)";

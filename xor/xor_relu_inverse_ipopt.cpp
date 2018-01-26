@@ -12,6 +12,11 @@
 #include <math.h>
 #include <cstring>
 
+#if USE_EXTENDED_FLOAT
+#include <mpfr.h>
+const unsigned mpfrPrecision = 128;
+#endif
+
 // Model trained using Keras/Tensorflow with Relu units
 
 // input weights to hidden layer
@@ -311,24 +316,77 @@ int main()
 
 // differentiable Relu operator
 
-const Number steepness = 10;//need extended precision for higher steepness TODO
+#if USE_EXTENDED_FLOAT
+const Number steepness = 1000;
+#else
+const Number steepness = 10;
+#endif
+
+static mpfr_t op0, op1, op2, op3, op4, op5, op6;
+static bool mpfrInitialized = false;
+
+void initializeMpfr() {
+  if(!mpfrInitialized) {
+    mpfr_init2(op0, mpfrPrecision);
+    mpfr_init2(op1, mpfrPrecision);
+    mpfr_init2(op2, mpfrPrecision);
+    mpfr_init2(op3, mpfrPrecision);
+    mpfr_init2(op4, mpfrPrecision);
+    mpfr_init2(op5, mpfrPrecision);
+    mpfr_init2(op6, mpfrPrecision);
+    mpfrInitialized = true;
+  }
+}
 
 Number Relu(Number x) {
-  return x / (1 + exp(-steepness * x));
+  initializeMpfr();
+#if USE_EXTENDED_FLOAT
+  mpfr_set_flt(op0, x, MPFR_RNDN);
+  mpfr_set_flt(op1, x * -steepness, MPFR_RNDN);
+  mpfr_exp(op2, op1, MPFR_RNDN); // op2 = exp(-steepness * x)
+  mpfr_set_flt(op1, 1, MPFR_RNDN);
+  mpfr_add(op3, op2, op1, MPFR_RNDN); // op3 = exp(-steepness*x)+1
+  mpfr_div(op1, op0, op3, MPFR_RNDN); // op1 = result
+  Number result = mpfr_get_flt(op1, MPFR_RNDN);
+#else
+  Number result = x / (1 + exp(-steepness * x));
+#endif
+  std::cout << "Relu(" << x << ") = " << result << std::endl;
+  return result;
 }
 
 
-
+#if 0
 Number dRelu_dx(Number x) {
+#if USE_EXTENDED_FLOAT
+  initializeMpfr();
+  mpfr_set_flt(op0, steepness * x, MPFR_RNDN);
+  mpfr_exp(op1, op0, MPFR_RNDN); // op1 = exp(steepness * x)
+  mpfr_set_flt(op0, 2 * steepness * x, MPFR_RNDN);
+  mpfr_exp(op2, op0, MPFR_RNDN); // op2 = exp(2 * steepness * x)
+  mpfr_set_flt(op3, 2, MPFR_RNDN);
+  mpfr_mul(op0, op2, op3, MPFR_RNDN); // op0 = 2 * exp(2 * steepness * x)
+  mpfr_set_flt(op2, steepness * x + 1, MPFR_RNDN); // op2 = steepness * x + 1
+  mpfr_add(op3, op2, op1, MPFR_RNDN); // op3 = steepness * x + 1 + exp(steepness * x)
+  mpfr_mul(op2, op0, op3, MPFR_RNDN); // op2 = numerator
+  mpfr_set_flt(op3, 3, MPFR_RNDN);
+  mpfr_pow(op0, op1, op3, MPFR_RNDN); // op0 = denominator
+  mpfr_div(op1, op2, op0, MPFR_RNDN);
+  Number result = mpfr_get_flt(op1, MPFR_RNDN);
+  return result;
+
+#else
   return
   (2 * exp(2 * steepness * x) * (steepness * x + exp(steepness * x) + 1))
   /
   pow((exp(steepness * x) + 1), 3);
+#endif
   //TODO use extended precision library and exp fuction, cast result to Number
   
   // derivative by WolframAlpha
   //(2 x e^(2 k x) (k x + e^(k x) + 1))/(e^(k x) + 1)^3
 }
+#endif
 
 
 void affine1(Number W1[numInputUnits][numHiddenUnits],
@@ -482,13 +540,45 @@ Bool eval_grad_f(Index n, Number* x, Bool new_x,
     Number x = z2_computed[i];
     Number a = a_o[i];
     Number k = steepness;
+    
+#if USE_EXTENDED_FLOAT
+    
+    initializeMpfr();
+    mpfr_set_flt(op0, k * x, MPFR_RNDN); // op0 = k*x
+    mpfr_exp(op1, op0, MPFR_RNDN); // op1 = exp(k*x)
+    mpfr_add(op2, op0, op1, MPFR_RNDN); // op2 = k*x+exp(k*x)
+    mpfr_set_flt(op3, 1, MPFR_RNDN);
+    mpfr_add(op4, op2, op3, MPFR_RNDN); // op4 = k*x+exp(k*x)+1
+    mpfr_set_flt(op3, 2, MPFR_RNDN);
+    mpfr_mul(op5, op1, op3, MPFR_RNDN); // op5 = 2*exp(k*x)
+    mpfr_mul(op3, op5, op4, MPFR_RNDN); // op3 = 2*exp(k*x)*(k*x+exp(k*x)+1)
+    mpfr_set_flt(op4, a, MPFR_RNDN);
+    mpfr_mul(op5, op4, op1, MPFR_RNDN); // op5 = a*exp(k*x)
+    mpfr_add(op6, op5, op4, MPFR_RNDN); // op6 = a*exp(k*x)+a
+    mpfr_set_flt(op4, x, MPFR_RNDN);
+    mpfr_mul(op5, op4, op1, MPFR_RNDN); // op5 = x*exp(k*x)
+    mpfr_sub(op4, op6, op5, MPFR_RNDN); // op4 = a*exp(k*x)+a-x*exp(k*x)
+    mpfr_mul(op5, op4, op3, MPFR_RNDN); // op5 = numerator
+    mpfr_set_flt(op0, 1, MPFR_RNDN);
+    mpfr_add(op2, op1, op0, MPFR_RNDN); // op2 = exp(k*x)+1
+    mpfr_set_flt(op0, 3, MPFR_RNDN);
+    mpfr_pow(op4, op2, op0, MPFR_RNDN); // op4 = denominator
+    mpfr_div(op0, op5, op4, MPFR_RNDN); // op0 = result
+    Number result = mpfr_get_flt(op0, MPFR_RNDN);
+    grad_f[i] = result;
+    
+#else
+    
     Number numerator = -(2 * exp(k * x) * (k * x + exp(k * x) + 1) * (a * exp(k * x) + a - x * exp(k * x)));
     Number denominator = pow(exp(k * x) + 1, 3);
     grad_f[i] = numerator /denominator;
-    std::cout << "x " << x << " a " << a << " k " << k << std::endl;
-    std::cout << "grad_f[" << i << "] = " << grad_f[i] << " = " << numerator << " / " << denominator << std::endl;
+
+#endif
+
+    std::cout << "grad_f[" << i << "] = " << grad_f[i] << std::endl;
   }
   std::cout << std::endl;
+  
   return TRUE;
 }
 

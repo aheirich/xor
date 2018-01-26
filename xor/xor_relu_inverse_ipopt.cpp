@@ -247,12 +247,15 @@ int main()
   free(g_U);
   
   /* Set some options. */
-  AddIpoptNumOption(nlp, (char*)"tol", 0.0001);
+  //AddIpoptNumOption(nlp, (char*)"tol", 0.0001);
   AddIpoptStrOption(nlp, (char*)"hessian_approximation", (char*)"limited-memory");
   
   /* allocate space for the initial point and set the values */
   x = (Number*)calloc(n, sizeof(Number));
+ 
+#if INITIALIZE_AT_FIXED_POINT
   initializeAtAFixedPoint(x);
+#endif
   
   
   /* allocate space to store the bound multipliers at the solution */
@@ -355,38 +358,6 @@ Number Relu(Number x) {
   return result;
 }
 
-
-#if 0
-Number dRelu_dx(Number x) {
-#if USE_EXTENDED_FLOAT
-  initializeMpfr();
-  mpfr_set_flt(op0, steepness * x, MPFR_RNDN);
-  mpfr_exp(op1, op0, MPFR_RNDN); // op1 = exp(steepness * x)
-  mpfr_set_flt(op0, 2 * steepness * x, MPFR_RNDN);
-  mpfr_exp(op2, op0, MPFR_RNDN); // op2 = exp(2 * steepness * x)
-  mpfr_set_flt(op3, 2, MPFR_RNDN);
-  mpfr_mul(op0, op2, op3, MPFR_RNDN); // op0 = 2 * exp(2 * steepness * x)
-  mpfr_set_flt(op2, steepness * x + 1, MPFR_RNDN); // op2 = steepness * x + 1
-  mpfr_add(op3, op2, op1, MPFR_RNDN); // op3 = steepness * x + 1 + exp(steepness * x)
-  mpfr_mul(op2, op0, op3, MPFR_RNDN); // op2 = numerator
-  mpfr_set_flt(op3, 3, MPFR_RNDN);
-  mpfr_pow(op0, op1, op3, MPFR_RNDN); // op0 = denominator
-  mpfr_div(op1, op2, op0, MPFR_RNDN);
-  Number result = mpfr_get_flt(op1, MPFR_RNDN);
-  return result;
-
-#else
-  return
-  (2 * exp(2 * steepness * x) * (steepness * x + exp(steepness * x) + 1))
-  /
-  pow((exp(steepness * x) + 1), 3);
-#endif
-  //TODO use extended precision library and exp fuction, cast result to Number
-  
-  // derivative by WolframAlpha
-  //(2 x e^(2 k x) (k x + e^(k x) + 1))/(e^(k x) + 1)^3
-}
-#endif
 
 
 void affine1(Number W1[numInputUnits][numHiddenUnits],
@@ -498,8 +469,8 @@ Bool eval_f(Index n, Number* x, Bool new_x,
   }
   *obj_value = sumSquaredError;
   //
-  std::cout << "ao_computed: " << a_o_computed[0] << " " << a_o_computed[1] << std::endl;
-  std::cout << "ao_target:   " << a_o_target[0] << " " << a_o_target[1] << std::endl;
+  std::cout << "a_o_computed: " << a_o_computed[0] << " " << a_o_computed[1] << std::endl;
+  std::cout << "a_o_target:   " << a_o_target[0] << " " << a_o_target[1] << std::endl;
   std::cout << "f: " << sumSquaredError << std::endl;
   //
   return TRUE;
@@ -586,6 +557,9 @@ Bool eval_grad_f(Index n, Number* x, Bool new_x,
 void generateConstraints(Number* z_computed, Number* z, Number* alpha, unsigned numUnits, Number*& gNext, Number*& gPtr, unsigned& gIdx) {
   
   for(unsigned i = 0; i < numUnits; ++i) {
+    
+    std::cout << "unit " << i << std::endl;
+    
 #if FIVE_CONSTRAINTS
     *gNext++ = alpha[i] * z[i] * -1;
     if(alpha[i] > 0.5) {

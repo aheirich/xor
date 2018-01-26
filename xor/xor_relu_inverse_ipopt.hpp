@@ -14,6 +14,7 @@
 
 #define FIVE_CONSTRAINTS 0
 #define USE_EXTENDED_FLOAT 1
+#define INITIALIZE_AT_FIXED_POINT 1
 
 const unsigned numInputUnits = 2;
 const unsigned numHiddenUnits = 16;

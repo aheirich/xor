@@ -12,13 +12,19 @@
 #include "IpStdCInterface.h"
 #include "IpIpoptApplication.hpp"
 
+#define FIVE_CONSTRAINTS 0
+
 const unsigned numInputUnits = 2;
 const unsigned numHiddenUnits = 16;
 const unsigned numOutputUnits = 2;
 const unsigned numActivations = numInputUnits + numHiddenUnits + numOutputUnits;
 const unsigned numAlpha = numInputUnits + numHiddenUnits;
 const unsigned numUnknowns = numActivations + numAlpha;
+#if FIVE_CONSTRAINTS
+const unsigned constraintsPerAlpha = 5;
+#else
 const unsigned constraintsPerAlpha = 3;
+#endif
 const unsigned numConstraints = constraintsPerAlpha * numAlpha;
 
 /* This is an example how user_data can be used. */

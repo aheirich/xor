@@ -493,7 +493,6 @@ Bool eval_grad_f(Index n, Number* x, Bool new_x,
 }
 
 
-#define FIVE_CONSTRAINTS 0
 
 
 Bool eval_g(Index n, Number* x, Bool new_x,
@@ -508,86 +507,96 @@ Bool eval_g(Index n, Number* x, Bool new_x,
   Number* alpha2 = x + numActivations;
   Number* alpha1 = alpha2 + numOutputUnits;
   Number* gNext = g;
-  
+  Number* gPtr = g;
+
   Number z2_computed[numOutputUnits];
   affine2(W2, z1, b2, z2_computed);
-  for(unsigned i = 0; i < numOutputUnits; ++i) {
-#if FIVE_CONSTRAINTS
-    *gNext++ = alpha2[i] * z2[i] * -1;
-#endif
-    *gNext++ = alpha2[i] * (z2_computed[i] - z2[i]);
-    *gNext++ = (1 - alpha2[i]) * z2_computed[i];
-#if FIVE_CONSTRAINTS
-    *gNext++ = (1 - alpha2[i]) * z2[i];
-#endif
-    *gNext++ = alpha2[i] * (1 - alpha2[i]);
-  }
-  
-  Number z1_computed[numHiddenUnits];
-  affine1(W1, z0, b1, z1_computed);
-  for(unsigned i = 0; i < numHiddenUnits; ++i) {
-#if FIVE_CONSTRAINTS
-    *gNext++ = alpha1[i] * z1[i] * -1;
-#endif
-    *gNext++ = alpha1[i] * (z1_computed[i] - z1[i]);
-    *gNext++ = (1 - alpha1[i]) * z1_computed[i];
-#if FIVE_CONSTRAINTS
-    *gNext++ = (1 - alpha1[i]) * z1[i];
-#endif
-    *gNext++ = alpha1[i] * (1 - alpha1[i]);
-  }
-  
-  Number* gPtr = g;
   std::cout << std::endl << "constraints for z2:" << std::endl;
+  unsigned gIdx = 0;
+  
   for(unsigned i = 0; i < numOutputUnits; ++i) {
     std::cout << "alpha2_" << i << " = " << alpha2[i] << std::endl;
+    
+#if FIVE_CONSTRAINTS
+    *gNext++ = alpha2[i] * z2[i] * -1;
     if(alpha2[i] > 0.5) {
-#if FIVE_CONSTRAINTS
-      std::cout << alpha2[i] << " * z2_" << i << " " << z2[i] << " * -1 = " << *gPtr++ << " <=? 0" << std::endl;
-#endif
-      std::cout << alpha2[i] << " * (W2.z1+b2-z2)_" << i << " " << (z2_computed[i] - z2[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
-      std::cout << (1 - alpha2[i]) << " * " << z2_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-#if FIVE_CONSTRAINTS
-      std::cout << (1 - alpha2[i]) << " * " << z2[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-#endif
+      std::cout << "g[" << gIdx++ << "] " << alpha2[i] << " * z2_" << i << " " << z2[i] << " * -1 = " << *gPtr++ << " <=? 0" << std::endl;
     } else {
-#if FIVE_CONSTRAINTS
-      std::cout << alpha2[i] << " * " << z2[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-#endif
-      std::cout << alpha2[i] << " * " << (z2_computed[i] - z2[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
-      std::cout << (1 - alpha2[i]) << " * (W2.z1+b2) " << z2_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-#if FIVE_CONSTRAINTS
-     std::cout << (1 - alpha2[i]) << " * z2_" << i << " " << z2[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-#endif
+      std::cout << "g[" << gIdx++ << "] " << alpha2[i] << " * " << z2[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
     }
-    std::cout << alpha2[i] << " * (1 - " << alpha2[i] << ") = " << alpha2[i] * (1 - alpha2[i]) << " =? 0" << std::endl;
+#endif
+    
+    *gNext++ = alpha2[i] * (z2_computed[i] - z2[i]);
+    if(alpha2[i] > 0.5) {
+      std::cout << "g[" << gIdx++ << "] " << alpha2[i] << " * (W2.z1+b2-z2)_" << i << " " << (z2_computed[i] - z2[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
+    } else {
+      std::cout << "g[" << gIdx++ << "] " << alpha2[i] << " * " << (z2_computed[i] - z2[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
+    }
+    
+    *gNext++ = (1 - alpha2[i]) * z2_computed[i];
+    if(alpha2[i] > 0.5) {
+      std::cout << "g[" << gIdx++ << "] " << (1 - alpha2[i]) << " * " << z2_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+    } else {
+      std::cout << "g[" << gIdx++ << "] " << (1 - alpha2[i]) << " * (W2.z1+b2) " << z2_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+    }
+    
+#if FIVE_CONSTRAINTS
+    *gNext++ = (1 - alpha2[i]) * z2[i];
+    if(alpha2[i] > 0.5) {
+      std::cout << "g[" << gIdx++ << "] " << (1 - alpha2[i]) << " * " << z2[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+    } else {
+      std::cout << "g[" << gIdx++ << "] " << (1 - alpha2[i]) << " * z2_" << i << " " << z2[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+    }
+#endif
+    
+    *gNext++ = alpha2[i] * (1 - alpha2[i]);
+    std::cout << "g[" << gIdx++ << "] " << alpha2[i] << " * (1 - " << alpha2[i] << ") = " << alpha2[i] * (1 - alpha2[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
   }
   std::cout << std::endl;
   
   
+  
+  Number z1_computed[numHiddenUnits];
+  affine1(W1, z0, b1, z1_computed);
   std::cout << std::endl << "constraints for z1:" << std::endl;
-  for(unsigned i = 0; i < numOutputUnits; ++i) {
+  
+  for(unsigned i = 0; i < numHiddenUnits; ++i) {
     std::cout << "alpha1_" << i << " = " << alpha1[i] << std::endl;
+    
+#if FIVE_CONSTRAINTS
+    *gNext++ = alpha1[i] * z1[i] * -1;
     if(alpha1[i] > 0.5) {
-#if FIVE_CONSTRAINTS
-      std::cout << alpha1[i] << " * z1_" << i << " " << z1[i] << " * -1 = " << *gPtr++ << " <=? 0" << std::endl;
-#endif
-      std::cout << alpha1[i] << " * (W1.z0+b1-z1)_" << i << " " << (z1_computed[i] - z1[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
-      std::cout << (1 - alpha1[i]) << " * " << z1_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-#if FIVE_CONSTRAINTS
-      std::cout << (1 - alpha1[i]) << " * " << z1[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-#endif
+      std::cout << "g[" << gIdx++ << "] " << alpha1[i] << " * z1_" << i << " " << z1[i] << " * -1 = " << *gPtr++ << " <=? 0" << std::endl;
     } else {
-#if FIVE_CONSTRAINTS
-     std::cout << alpha1[i] << " * " << z1[i] << " * -1 = " << *gPtr++ << " <=? 0" << std::endl;
-#endif
-      std::cout << alpha1[i] << " * " << (z1_computed[i] - z1[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
-      std::cout << (1 - alpha1[i]) << " * (W1.z0+b1) " << z1_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-#if FIVE_CONSTRAINTS
-      std::cout << (1 - alpha1[i]) << " * z1_" << i << " " << z1[i] << " = " << *gPtr++ << " =? 0" << std::endl;
-#endif
+      std::cout << "g[" << gIdx++ << "] " << alpha1[i] << " * " << z1[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
     }
-    std::cout << alpha1[i] << " * (1 - " << alpha1[i] << ") = " << alpha1[i] * (1 - alpha1[i]) << " =? 0" << std::endl;
+#endif
+    
+    *gNext++ = alpha1[i] * (z1_computed[i] - z1[i]);
+    if(alpha1[i] > 0.5) {
+      std::cout << "g[" << gIdx++ << "] " << alpha1[i] << " * (W1.z0+b1-z1)_" << i << " " << (z1_computed[i] - z1[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
+    } else {
+      std::cout << "g[" << gIdx++ << "] " << alpha1[i] << " * " << (z1_computed[i] - z1[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
+    }
+    
+    *gNext++ = (1 - alpha1[i]) * z1_computed[i];
+    if(alpha1[i] > 0.5) {
+      std::cout << "g[" << gIdx++ << "] " << (1 - alpha1[i]) << " * " << z1_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+    } else {
+      std::cout << "g[" << gIdx++ << "] " << (1 - alpha1[i]) << " * (W1.z0+b1) " << z1_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+    }
+    
+#if FIVE_CONSTRAINTS
+    *gNext++ = (1 - alpha1[i]) * z1[i];
+    if(alpha1[i] > 0.5) {
+      std::cout << "g[" << gIdx++ << "] " << (1 - alpha1[i]) << " * " << z1[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+    } else {
+      std::cout << "g[" << gIdx++ << "] " << (1 - alpha1[i]) << " * z1_" << i << " " << z1[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+    }
+#endif
+    
+    *gNext++ = alpha1[i] * (1 - alpha1[i]);
+    std::cout << "g[" << gIdx++ << "] " << alpha1[i] << " * (1 - " << alpha1[i] << ") = " << alpha1[i] * (1 - alpha1[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
   }
   std::cout << std::endl;
   
@@ -905,12 +914,10 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
         if (unit < numOutputUnits) {
           unsigned u = unit;
           std::cout << "unit " << u << " layer 2" << std::endl;
-        } else if (unit < numHiddenUnits) {
+        } else if (unit < numOutputUnits + numHiddenUnits) {
+          std::cout<<unit<<std::endl;
           unsigned u = unit - numOutputUnits;
           std::cout << "unit " << u << " layer 1" << std::endl;
-        } else if (unit << numActivations) {
-          unsigned u = unit - numOutputUnits + numHiddenUnits;
-          std::cout << "unit " << u << " layer 0" << std::endl;
         }
       }
       std::cout << gIdx << ": ";

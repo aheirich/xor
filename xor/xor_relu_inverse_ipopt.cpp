@@ -62,10 +62,10 @@ Number b2[numOutputUnits] = {-0.10707041,  0.33430237};
  * W a + b <= z   if z == 0
  *
  * implement this as a set of constraints with boolean variable alpha
- * alpha * z >= 0           if z >= 0 and alpha == 1
+ * ( alpha * z >= 0           if z >= 0 and alpha == 1 )
  * alpha(W a + b - z) = 0   if z > 0 and alpha == 1
  * (1-alpha)(W a + b) <= 0  if z == 0 and alpha == 0
- * (1-alpha) z <= 0         consistent with Relu(z)=0
+ * ( (1-alpha) z <= 0         consistent with Relu(z)=0 )
  * alpha(1 - alpha) = 0     ensure alpha is 0 or 1
  *
  * if the solver chooses a solution where alpha == 1 that means
@@ -105,29 +105,29 @@ Number b2[numOutputUnits] = {-0.10707041,  0.33430237};
  
  * Order of constraints:
  
- * alpha2_0 z2_0 >= 0
+ * ( alpha2_0 z2_0 >= 0 )
  * alpha2_0 (W2 z1 + b2 - z2)_0 = 0
  * (1-alpha2_0) (W2 z1 + b2)_0 <= 0
- * (1-alpha2_0) z2_0 <= 0
+ * ( (1-alpha2_0) z2_0 <= 0 )
  * alpha2_0 (1-alpha2_0) = 0
  
- * alpha2_1 z2_1 >= 0
+ * ( alpha2_1 z2_1 >= 0 )
  * alpha2_1 (W2 a1 + b2 - z2)_1 = 0
  * (1-alpha2_1) (W2 a1 + b2)_1 <= 0
- * (1-alpha2_1) z2_1 <= 0
+ * ( (1-alpha2_1) z2_1 <= 0 )
  * alpha2_1 (1-alpha2_1) = 0
  
- * alpha1_0 z1_0 >= 0
+ * ( alpha1_0 z1_0 >= 0 )
  * alpha1_0 (W1 z0 + b1 - z1)_0 = 0
  * (1-alpha1_0) (W1 z0 + b1)_0 <= 0
- * (1-alpha1_0) z1_0 <= 0
+ * ( (1-alpha1_0) z1_0 <= 0 )
  * alpha1_0 (1-alpha1_0) = 0
  
  * ...
- * alpha1_i z1_i >= 0
+ * ( alpha1_i z1_i >= 0 )
  * alpha1_i (W1 z0 + b1 - z1)_i = 0
  * (1-alpha1_i) (W1 z0 + b1)_i <= 0
- * (1-alpha1_i) z1_i <= 0
+ * ( (1-alpha1_i) z1_i <= 0 )
  * alpha1_i (1-alpha1_i) = 0
  
  */
@@ -157,11 +157,11 @@ void initializeAtAFixedPoint(Number* x) {
   // initialize alpha with respect to the known z
   Number* alpha2 = z0 + numInputUnits;
   for(unsigned i = 0; i < numOutputUnits; ++i) {
-    alpha2[i] = (z2[i] <= 0) ? 1 : 0;
+    alpha2[i] = (z2[i] >= 0) ? 1 : 0;
   }
   Number* alpha1 = alpha2 + numOutputUnits;
   for(unsigned i = 0; i < numHiddenUnits; ++i) {
-    alpha1[i] = (z1[i] <= 0) ? 1 : 0;
+    alpha1[i] = (z1[i] >= 0) ? 1 : 0;
   }
 }
 
@@ -247,7 +247,7 @@ int main()
   free(g_U);
   
   /* Set some options. */
-  //  AddIpoptStrOption(nlp, (char*)"output_file", (char*)"ipopt.out");
+  AddIpoptNumOption(nlp, (char*)"tol", 0.0001);
   AddIpoptStrOption(nlp, (char*)"hessian_approximation", (char*)"limited-memory");
   
   /* allocate space for the initial point and set the values */
@@ -351,7 +351,7 @@ Number Relu(Number x) {
 #else
   Number result = x / (1 + exp(-steepness * x));
 #endif
-  std::cout << "Relu(" << x << ") = " << result << std::endl;
+  //std::cout << "Relu(" << x << ") = " << result << std::endl;
   return result;
 }
 
@@ -415,7 +415,7 @@ void affine2(Number W2[numHiddenUnits][numOutputUnits],
   for(unsigned i = 0; i < numOutputUnits; ++i) {
     z2[i] = 0;
     for(unsigned j = 0; j < numHiddenUnits; ++j) {
-      z2[i] += W2[j][i] * z1[j];
+      z2[i] += W2[j][i] * Relu(z1[j]);
     }
     z2[i] += b2[i];
   }
@@ -441,13 +441,11 @@ void activation2(Number W2[numHiddenUnits][numOutputUnits],
 
 
 void printUnknowns(Number* x) {
-  static unsigned iteration = 0;
   Number* z2 = x;
   Number* z1 = z2 + numOutputUnits;
   Number* z0 = z1 + numHiddenUnits;
   Number* alpha2 = z0 + numInputUnits;
   Number* alpha1 = alpha2 + numOutputUnits;
-  std::cout << "=== iteration " << iteration++ << "===" << std::endl;
   
   std::cout << "z2: ";
   for(unsigned i = 0; i < numOutputUnits; ++i) {
@@ -501,7 +499,8 @@ Bool eval_f(Index n, Number* x, Bool new_x,
   *obj_value = sumSquaredError;
   //
   std::cout << "ao_computed: " << a_o_computed[0] << " " << a_o_computed[1] << std::endl;
-  std::cout << "objective: " << sumSquaredError << std::endl;
+  std::cout << "ao_target:   " << a_o_target[0] << " " << a_o_target[1] << std::endl;
+  std::cout << "f: " << sumSquaredError << std::endl;
   //
   return TRUE;
 }
@@ -523,19 +522,19 @@ Bool eval_f(Index n, Number* x, Bool new_x,
  * grad_f = 2 e^2k k ( k + e^k + 1 ) / ( e^k + 1 )^3
  *
  */
-//TODO use extended precision library and exp fuction, cast result to Number
 
 
 Bool eval_grad_f(Index n, Number* x, Bool new_x,
                  Number* grad_f, UserDataPtr user_data)
 {
   assert(n == numUnknowns);
-  Number* z1 = x + numInputUnits;
+  Number* z1 = x + numOutputUnits;
   Number z2_computed[numOutputUnits];
   affine2(W2, z1, b2, z2_computed);
+  
   MyUserData* myUserData = (MyUserData*)user_data;
   Number* a_o = myUserData->ao_target;
-  std::cout << "grad f: " << std::endl;
+  
   for(unsigned i = 0; i < numOutputUnits; ++i) {
     Number x = z2_computed[i];
     Number a = a_o[i];
@@ -584,6 +583,50 @@ Bool eval_grad_f(Index n, Number* x, Bool new_x,
 
 
 
+void generateConstraints(Number* z_computed, Number* z, Number* alpha, unsigned numUnits, Number*& gNext, Number*& gPtr, unsigned& gIdx) {
+  
+  for(unsigned i = 0; i < numUnits; ++i) {
+#if FIVE_CONSTRAINTS
+    *gNext++ = alpha[i] * z[i] * -1;
+    if(alpha[i] > 0.5) {
+      std::cout << "g[" << gIdx++ << "] " << alpha[i] << " * z_" << i << " " << z[i] << " * -1 = " << *gPtr++ << " <=? 0" << std::endl;
+    } else {
+      std::cout << "g[" << gIdx++ << "] " << alpha[i] << " * " << z[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+    }
+#endif
+    
+    *gNext++ = alpha[i] * (z_computed[i] - z[i]);
+    if(alpha[i] > 0.5) {
+      std::cout << "g[" << gIdx++ << "] " << alpha[i] << " * (W.z+b-z')_" << i << " " << (z_computed[i] - z[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
+    } else {
+      std::cout << "g[" << gIdx++ << "] " << alpha[i] << " * " << (z_computed[i] - z[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
+    }
+    
+    *gNext++ = (1 - alpha[i]) * z_computed[i];
+    if(alpha[i] > 0.5) {
+      std::cout << "g[" << gIdx++ << "] " << (1 - alpha[i]) << " * " << z_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+    } else {
+      std::cout << "g[" << gIdx++ << "] " << (1 - alpha[i]) << " * (W.z+b) " << z_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+    }
+    
+#if FIVE_CONSTRAINTS
+    *gNext++ = (1 - alpha[i]) * z[i];
+    if(alpha[i] > 0.5) {
+      std::cout << "g[" << gIdx++ << "] " << (1 - alpha[i]) << " * " << z[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+    } else {
+      std::cout << "g[" << gIdx++ << "] " << (1 - alpha[i]) << " * z_" << i << " " << z[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
+    }
+#endif
+    
+    *gNext++ = alpha[i] * (1 - alpha[i]);
+    std::cout << "g[" << gIdx++ << "] " << alpha[i] << " * (1 - " << alpha[i] << ") = " << alpha[i] * (1 - alpha[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
+
+  }
+  std::cout << std::endl;
+}
+
+
+
 
 Bool eval_g(Index n, Number* x, Bool new_x,
             Index m, Number* g, UserDataPtr user_data)
@@ -598,98 +641,17 @@ Bool eval_g(Index n, Number* x, Bool new_x,
   Number* alpha1 = alpha2 + numOutputUnits;
   Number* gNext = g;
   Number* gPtr = g;
+  unsigned gIdx = 0;
 
   Number z2_computed[numOutputUnits];
   affine2(W2, z1, b2, z2_computed);
   std::cout << std::endl << "constraints for z2:" << std::endl;
-  unsigned gIdx = 0;
-  
-  for(unsigned i = 0; i < numOutputUnits; ++i) {
-    std::cout << "alpha2_" << i << " = " << alpha2[i] << std::endl;
-    
-#if FIVE_CONSTRAINTS
-    *gNext++ = alpha2[i] * z2[i] * -1;
-    if(alpha2[i] > 0.5) {
-      std::cout << "g[" << gIdx++ << "] " << alpha2[i] << " * z2_" << i << " " << z2[i] << " * -1 = " << *gPtr++ << " <=? 0" << std::endl;
-    } else {
-      std::cout << "g[" << gIdx++ << "] " << alpha2[i] << " * " << z2[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-    }
-#endif
-    
-    *gNext++ = alpha2[i] * (z2_computed[i] - z2[i]);
-    if(alpha2[i] > 0.5) {
-      std::cout << "g[" << gIdx++ << "] " << alpha2[i] << " * (W2.z1+b2-z2)_" << i << " " << (z2_computed[i] - z2[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
-    } else {
-      std::cout << "g[" << gIdx++ << "] " << alpha2[i] << " * " << (z2_computed[i] - z2[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
-    }
-    
-    *gNext++ = (1 - alpha2[i]) * z2_computed[i];
-    if(alpha2[i] > 0.5) {
-      std::cout << "g[" << gIdx++ << "] " << (1 - alpha2[i]) << " * " << z2_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-    } else {
-      std::cout << "g[" << gIdx++ << "] " << (1 - alpha2[i]) << " * (W2.z1+b2) " << z2_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-    }
-    
-#if FIVE_CONSTRAINTS
-    *gNext++ = (1 - alpha2[i]) * z2[i];
-    if(alpha2[i] > 0.5) {
-      std::cout << "g[" << gIdx++ << "] " << (1 - alpha2[i]) << " * " << z2[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-    } else {
-      std::cout << "g[" << gIdx++ << "] " << (1 - alpha2[i]) << " * z2_" << i << " " << z2[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-    }
-#endif
-    
-    *gNext++ = alpha2[i] * (1 - alpha2[i]);
-    std::cout << "g[" << gIdx++ << "] " << alpha2[i] << " * (1 - " << alpha2[i] << ") = " << alpha2[i] * (1 - alpha2[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
-  }
-  std::cout << std::endl;
-  
-  
+  generateConstraints(z2_computed, z2, alpha2, numOutputUnits, gNext, gPtr, gIdx);
   
   Number z1_computed[numHiddenUnits];
   affine1(W1, z0, b1, z1_computed);
   std::cout << std::endl << "constraints for z1:" << std::endl;
-  
-  for(unsigned i = 0; i < numHiddenUnits; ++i) {
-    std::cout << "alpha1_" << i << " = " << alpha1[i] << std::endl;
-    
-#if FIVE_CONSTRAINTS
-    *gNext++ = alpha1[i] * z1[i] * -1;
-    if(alpha1[i] > 0.5) {
-      std::cout << "g[" << gIdx++ << "] " << alpha1[i] << " * z1_" << i << " " << z1[i] << " * -1 = " << *gPtr++ << " <=? 0" << std::endl;
-    } else {
-      std::cout << "g[" << gIdx++ << "] " << alpha1[i] << " * " << z1[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-    }
-#endif
-    
-    *gNext++ = alpha1[i] * (z1_computed[i] - z1[i]);
-    if(alpha1[i] > 0.5) {
-      std::cout << "g[" << gIdx++ << "] " << alpha1[i] << " * (W1.z0+b1-z1)_" << i << " " << (z1_computed[i] - z1[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
-    } else {
-      std::cout << "g[" << gIdx++ << "] " << alpha1[i] << " * " << (z1_computed[i] - z1[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
-    }
-    
-    *gNext++ = (1 - alpha1[i]) * z1_computed[i];
-    if(alpha1[i] > 0.5) {
-      std::cout << "g[" << gIdx++ << "] " << (1 - alpha1[i]) << " * " << z1_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-    } else {
-      std::cout << "g[" << gIdx++ << "] " << (1 - alpha1[i]) << " * (W1.z0+b1) " << z1_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-    }
-    
-#if FIVE_CONSTRAINTS
-    *gNext++ = (1 - alpha1[i]) * z1[i];
-    if(alpha1[i] > 0.5) {
-      std::cout << "g[" << gIdx++ << "] " << (1 - alpha1[i]) << " * " << z1[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-    } else {
-      std::cout << "g[" << gIdx++ << "] " << (1 - alpha1[i]) << " * z1_" << i << " " << z1[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
-    }
-#endif
-    
-    *gNext++ = alpha1[i] * (1 - alpha1[i]);
-    std::cout << "g[" << gIdx++ << "] " << alpha1[i] << " * (1 - " << alpha1[i] << ") = " << alpha1[i] * (1 - alpha1[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
-  }
-  std::cout << std::endl;
-  
+  generateConstraints(z1_computed, z1, alpha1, numHiddenUnits, gNext, gPtr, gIdx);
   
   return TRUE;
 }

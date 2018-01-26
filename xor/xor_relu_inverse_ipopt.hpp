@@ -16,6 +16,8 @@
 #define USE_EXTENDED_FLOAT 1
 #define INITIALIZE_AT_FIXED_POINT 1
 
+#define CASE_11
+
 const unsigned numInputUnits = 2;
 const unsigned numHiddenUnits = 16;
 const unsigned numOutputUnits = 2;

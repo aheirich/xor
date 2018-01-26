@@ -134,8 +134,51 @@ Number b2[numOutputUnits] = {-0.10707041,  0.33430237};
 
 
 void initializeAtAFixedPoint(Number* x) {
+  
+#ifdef CASE_00
+  // case 0,0
+  Number z2_00[] = {
+    7.02831719e-08,   9.99999778e-01
+  };
+  Number z1_00[] = {
+    2.95232803e-01,  -1.23388522e-09,   0.00000000e+00,
+    0.00000000e+00,   0.00000000e+00,   0.00000000e+00,
+    2.25655539e-09,   0.00000000e+00,   2.17137873e-01,
+    -4.03572953e-09,   0.00000000e+00,   3.15902193e-10,
+    1.22724542e-09,   0.00000000e+00,   0.00000000e+00,
+    3.08106124e-01
+  };
+  Number* z2 = x;
+  memcpy(z2, z2_00, numOutputUnits * sizeof(Number));
+  Number* z1 = z2 + numOutputUnits;
+  memcpy(z1, z1_00, numHiddenUnits * sizeof(Number));
+  Number* z0 = z1 + numHiddenUnits;
+  z0[0] = 0;
+  z0[1] = 0;
+  
+#elif defined(CASE_01)
+  // case 0,1
+  Number z2_01[] = {
+    9.99999979e-01,   1.39199773e-07
+  };
+  Number z1_01[] = {
+    -1.51370000e-05,   5.28251109e-01,  -2.11075870e-01,
+    -2.30737120e-01,  -5.52838330e-01,  -1.29792960e-01,
+    5.56117712e-01,  -3.69688270e-01,   2.21767103e-01,
+    7.69660346e-01,  -1.54532130e-01,  -5.86358850e-01,
+    -8.30396529e-01,  -4.75043100e-02,  -8.50040600e-02,
+    7.83409324e-01
+  };
+  Number* z2 = x;
+  memcpy(z2, z2_01, numOutputUnits * sizeof(Number));
+  Number* z1 = z2 + numOutputUnits;
+  memcpy(z1, z1_01, numHiddenUnits * sizeof(Number));
+  Number* z0 = z1 + numHiddenUnits;
+  z0[0] = 0;
+  z0[1] = 1;
+
+#elif defined(CASE_10)
   // case 1,0
-  // initialize Z to a known solution
   Number z2_10[] = {
     9.99999865e-01,   1.19366783e-07
   };
@@ -154,6 +197,30 @@ void initializeAtAFixedPoint(Number* x) {
   Number* z0 = z1 + numHiddenUnits;
   z0[0] = 1;
   z0[1] = 0;
+  
+#elif defined(CASE_11)
+  // case 1,1
+  Number z2_11[] = {
+    -0.0776303 ,  0.99999988
+  };
+  Number z1_11[] = {
+    -4.05549937e-01,   1.39487661e-05,  -6.50605650e-01,
+    -4.14170890e-01,  -1.02500391e+00,  -4.52205120e-01,
+    2.25655539e-09,  -7.50321710e-01,   2.69522363e-01,
+    1.82859643e-05,  -5.99903970e-01,   1.02160316e-04,
+    3.01227245e-07,  -3.14426160e-01,  -5.72297930e-01,
+    4.75303824e-01
+  };
+  Number* z2 = x;
+  memcpy(z2, z2_11, numOutputUnits * sizeof(Number));
+  Number* z1 = z2 + numOutputUnits;
+  memcpy(z1, z1_11, numHiddenUnits * sizeof(Number));
+  Number* z0 = z1 + numHiddenUnits;
+  z0[0] = 1;
+  z0[1] = 0;
+
+#endif
+  
   // initialize alpha with respect to the known z
   Number* alpha2 = z0 + numInputUnits;
   for(unsigned i = 0; i < numOutputUnits; ++i) {
@@ -265,8 +332,19 @@ int main()
   
   /* Initialize the user data with the value of the network output layer. */
   // output [1,0] inputs are [1,0] or [0,1]
+#ifdef CASE_00
+  user_data.ao_target[0] = 0.0;
+  user_data.ao_target[1] = 1.0;
+#elif defined(CASE_01)
   user_data.ao_target[0] = 1.0;
   user_data.ao_target[1] = 0.0;
+#elif defined(CASE_10)
+  user_data.ao_target[0] = 1.0;
+  user_data.ao_target[1] = 0.0;
+#elif defined(CASE_11)
+  user_data.ao_target[0] = 0.0;
+  user_data.ao_target[1] = 1.0;
+#endif
   
   /* Set the callback method for intermediate user-control.  This is
    * not required, just gives you some intermediate control in case

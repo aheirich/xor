@@ -1,7 +1,7 @@
 reset ;
 model xor_ampl.mod ; 
 data xor_ampl.dat ;
-data xor_ini1.dat ;
+#data xor_ini1.dat ;
 option solver "/Users/aheirich/Desktop/amplide.macosx64/minos" ;
 solve ;
 display z2;
@@ -9,4 +9,3 @@ display a2;
 display z1;
 display a1;
 display z0;
-display a0;

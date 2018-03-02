@@ -36,6 +36,9 @@
 		4D02B1791FCE5B3A00A074A1 /* xor-keras.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = "xor-keras.py"; sourceTree = "<group>"; };
 		4D02B17A1FCE5B3A00A074A1 /* network.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = network.py; sourceTree = "<group>"; };
 		4D0C422E201B05C7000D7C2F /* xor_relu_forward_activation.log.save */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = xor_relu_forward_activation.log.save; sourceTree = "<group>"; };
+		4D2AFE9C2048C8E5007775BB /* xor_ini1.dat */ = {isa = PBXFileReference; lastKnownFileType = text; path = xor_ini1.dat; sourceTree = "<group>"; };
+		4D5742E02048699F00187A52 /* xor_ampl.mod */ = {isa = PBXFileReference; lastKnownFileType = text; path = xor_ampl.mod; sourceTree = "<group>"; };
+		4D5742E120487FE500187A52 /* xor_ampl.dat */ = {isa = PBXFileReference; lastKnownFileType = text; path = xor_ampl.dat; sourceTree = "<group>"; };
 		4D620FB72012BF7200434DFD /* xor_relu_inverse_ipopt.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = xor_relu_inverse_ipopt.cpp; sourceTree = "<group>"; };
 		4D620FB82012BF7200434DFD /* xor_relu_inverse_ipopt.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = xor_relu_inverse_ipopt.hpp; sourceTree = "<group>"; };
 		4D9DE5762012F680005B32E9 /* xor_relu_inverse_ipopt */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = xor_relu_inverse_ipopt; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -91,6 +94,9 @@
 				4DA2A44220019DEF00FA3C9E /* xor_sigmoid_inverse.py */,
 				4D02B17A1FCE5B3A00A074A1 /* network.py */,
 				4D02B1791FCE5B3A00A074A1 /* xor-keras.py */,
+				4D5742E02048699F00187A52 /* xor_ampl.mod */,
+				4D2AFE9C2048C8E5007775BB /* xor_ini1.dat */,
+				4D5742E120487FE500187A52 /* xor_ampl.dat */,
 				4D9DE57E20130900005B32E9 /* Makefile */,
 			);
 			path = xor;

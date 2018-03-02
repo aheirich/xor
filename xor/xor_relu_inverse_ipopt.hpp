@@ -13,10 +13,11 @@
 #include "IpIpoptApplication.hpp"
 
 #define FIVE_CONSTRAINTS 0
+#define FOUR_CONSTRAINTS 1
 #define USE_EXTENDED_FLOAT 1
 #define INITIALIZE_AT_FIXED_POINT 1
 
-#define CASE_11
+#define CASE_00
 
 const unsigned numInputUnits = 2;
 const unsigned numHiddenUnits = 16;
@@ -26,6 +27,8 @@ const unsigned numAlpha = numInputUnits + numHiddenUnits;
 const unsigned numUnknowns = numActivations + numAlpha;
 #if FIVE_CONSTRAINTS
 const unsigned constraintsPerAlpha = 5;
+#elif FOUR_CONSTRAINTS
+const unsigned constraintsPerAlpha = 4;
 #else
 const unsigned constraintsPerAlpha = 3;
 #endif

@@ -176,7 +176,7 @@ void initializeAtAFixedPoint(Number* x) {
   Number* z0 = z1 + numHiddenUnits;
   z0[0] = 0;
   z0[1] = 1;
-
+  
 #elif defined(CASE_10)
   // case 1,0
   Number z2_10[] = {
@@ -218,17 +218,17 @@ void initializeAtAFixedPoint(Number* x) {
   Number* z0 = z1 + numHiddenUnits;
   z0[0] = 1;
   z0[1] = 0;
-
+  
 #endif
   
   // initialize alpha with respect to the known z
   Number* alpha2 = z0 + numInputUnits;
   for(unsigned i = 0; i < numOutputUnits; ++i) {
-    alpha2[i] = (z2[i] >= 0) ? 1 : 0;
+    alpha2[i] = (z2[i] > 0) ? 1 : 0;
   }
   Number* alpha1 = alpha2 + numOutputUnits;
   for(unsigned i = 0; i < numHiddenUnits; ++i) {
-    alpha1[i] = (z1[i] >= 0) ? 1 : 0;
+    alpha1[i] = (z1[i] > 0) ? 1 : 0;
   }
 }
 
@@ -290,6 +290,26 @@ int main()
   for(unsigned i = 0; i < m; ++i) {
     g_U[i] = 0;
     switch(i % constraintsPerAlpha) {
+#if FIVE_CONSTRAINTS
+      case 1:
+      case 4:
+        g_L[i] = 0;
+        break;
+      case 0:
+      case 2:
+      case 3:
+        g_L[i] = lowerConstraintBound;
+        break;
+#elif FOUR_CONSTRAINTS
+      case 0:
+      case 3:
+        g_L[i] = 0;
+        break;
+      case 1:
+      case 2:
+        g_L[i] = lowerConstraintBound;
+        break;
+#else
       case 0:
       case 2:
         g_L[i] = 0;
@@ -297,6 +317,7 @@ int main()
       case 1:
         g_L[i] = lowerConstraintBound;
         break;
+#endif
       default: assert(false);
     }
   }
@@ -319,7 +340,7 @@ int main()
   
   /* allocate space for the initial point and set the values */
   x = (Number*)calloc(n, sizeof(Number));
- 
+  
 #if INITIALIZE_AT_FIXED_POINT
   initializeAtAFixedPoint(x);
 #endif
@@ -398,7 +419,7 @@ int main()
 // differentiable Relu operator
 
 #if USE_EXTENDED_FLOAT
-const Number steepness = 1000;
+const Number steepness = 100000;
 #else
 const Number steepness = 10;
 #endif
@@ -490,41 +511,45 @@ void activation2(Number W2[numHiddenUnits][numOutputUnits],
 
 
 void printUnknowns(Number* x) {
-  Number* z2 = x;
-  Number* z1 = z2 + numOutputUnits;
-  Number* z0 = z1 + numHiddenUnits;
-  Number* alpha2 = z0 + numInputUnits;
-  Number* alpha1 = alpha2 + numOutputUnits;
-  
-  std::cout << "z2: ";
-  for(unsigned i = 0; i < numOutputUnits; ++i) {
-    std::cout << z2[i] << " ";
+  if(x != NULL) {
+    Number* z2 = x;
+    Number* z1 = z2 + numOutputUnits;
+    Number* z0 = z1 + numHiddenUnits;
+    Number* alpha2 = z0 + numInputUnits;
+    Number* alpha1 = alpha2 + numOutputUnits;
+    
+    std::cout << "z2: ";
+    for(unsigned i = 0; i < numOutputUnits; ++i) {
+      std::cout << z2[i] << " ";
+    }
+    std::cout << std::endl;
+    
+    std::cout << "z1: ";
+    for(unsigned i = 0; i < numHiddenUnits; ++i) {
+      std::cout << z1[i] << " ";
+    }
+    std::cout << std::endl;
+    
+    std::cout << "z0: ";
+    for(unsigned i = 0; i < numInputUnits; ++i) {
+      std::cout << z0[i] << " ";
+    }
+    std::cout << std::endl;
+    
+    std::cout << "alpha2: ";
+    for(unsigned i = 0; i < numOutputUnits; ++i) {
+      std::cout << alpha2[i] << " ";
+    }
+    std::cout << std::endl;
+    
+    std::cout << "alpha1: ";
+    for(unsigned i = 0; i < numHiddenUnits; ++i) {
+      std::cout << alpha1[i] << " ";
+    }
+    std::cout << std::endl;
+    
+    std::cout << std::endl;
   }
-  std::cout << std::endl;
-  
-  std::cout << "z1: ";
-  for(unsigned i = 0; i < numHiddenUnits; ++i) {
-    std::cout << z1[i] << " ";
-  }
-  std::cout << std::endl;
-  
-  std::cout << "z0: ";
-  for(unsigned i = 0; i < numInputUnits; ++i) {
-    std::cout << z0[i] << " ";
-  }
-  std::cout << std::endl;
-  
-  std::cout << "alpha2: ";
-  for(unsigned i = 0; i < numOutputUnits; ++i) {
-    std::cout << alpha2[i] << " ";
-  }
-  std::cout << std::endl;
-  
-  std::cout << "alpha1: ";
-  for(unsigned i = 0; i < numHiddenUnits; ++i) {
-    std::cout << alpha1[i] << " ";
-  }
-  std::cout << std::endl;
 }
 
 
@@ -577,6 +602,7 @@ Bool eval_grad_f(Index n, Number* x, Bool new_x,
                  Number* grad_f, UserDataPtr user_data)
 {
   assert(n == numUnknowns);
+  printUnknowns(x);
   Number* z1 = x + numOutputUnits;
   Number z2_computed[numOutputUnits];
   affine2(W2, z1, b2, z2_computed);
@@ -620,9 +646,9 @@ Bool eval_grad_f(Index n, Number* x, Bool new_x,
     Number numerator = -(2 * exp(k * x) * (k * x + exp(k * x) + 1) * (a * exp(k * x) + a - x * exp(k * x)));
     Number denominator = pow(exp(k * x) + 1, 3);
     grad_f[i] = numerator /denominator;
-
+    
 #endif
-
+    
     std::cout << "grad_f[" << i << "] = " << grad_f[i] << std::endl;
   }
   std::cout << std::endl;
@@ -661,7 +687,7 @@ void generateConstraints(Number* z_computed, Number* z, Number* alpha, unsigned 
       std::cout << "g[" << gIdx++ << "] " << (1 - alpha[i]) << " * (W.z+b) " << z_computed[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
     }
     
-#if FIVE_CONSTRAINTS
+#if FIVE_CONSTRAINTS | FOUR_CONSTRAINTS
     *gNext++ = (1 - alpha[i]) * z[i];
     if(alpha[i] > 0.5) {
       std::cout << "g[" << gIdx++ << "] " << (1 - alpha[i]) << " * " << z[i] << " = " << *gPtr++ << " <=? 0" << std::endl;
@@ -672,7 +698,7 @@ void generateConstraints(Number* z_computed, Number* z, Number* alpha, unsigned 
     
     *gNext++ = alpha[i] * (1 - alpha[i]);
     std::cout << "g[" << gIdx++ << "] " << alpha[i] << " * (1 - " << alpha[i] << ") = " << alpha[i] * (1 - alpha[i]) << " = " << *gPtr++ << " =? 0" << std::endl;
-
+    
   }
   std::cout << std::endl;
 }
@@ -685,6 +711,7 @@ Bool eval_g(Index n, Number* x, Bool new_x,
 {
   assert(n == numUnknowns);
   assert(m == numConstraints);
+  printUnknowns(x);
   
   Number* z2 = x;
   Number* z1 = x + numOutputUnits;
@@ -694,7 +721,7 @@ Bool eval_g(Index n, Number* x, Bool new_x,
   Number* gNext = g;
   Number* gPtr = g;
   unsigned gIdx = 0;
-
+  
   Number z2_computed[numOutputUnits];
   affine2(W2, z1, b2, z2_computed);
   std::cout << std::endl << "constraints for z2:" << std::endl;
@@ -715,7 +742,7 @@ void generateConstraintJacobian(Number* values, unsigned& numPoints, bool layer2
   for(unsigned unit = 0; unit < numUnits; ++unit) {
     
 #if FIVE_CONSTRAINTS
-
+    
     ///// g[0] /////
     
     // d g[0] / d z2
@@ -767,7 +794,7 @@ void generateConstraintJacobian(Number* values, unsigned& numPoints, bool layer2
     assert(numPoints % numUnknowns == 0);
     
 #endif
-
+    
     
     ///// g[1] /////
     
@@ -826,7 +853,7 @@ void generateConstraintJacobian(Number* values, unsigned& numPoints, bool layer2
     }
     
     assert(numPoints % numUnknowns == 0);
-
+    
     
     ///// g[2] /////
     
@@ -878,8 +905,8 @@ void generateConstraintJacobian(Number* values, unsigned& numPoints, bool layer2
     
     assert(numPoints % numUnknowns == 0);
     
-#if FIVE_CONSTRAINTS
-
+#if FIVE_CONSTRAINTS | FOUR_CONSTRAINTS
+    
     ///// g[3] /////
     
     // d g[3] / d z2
@@ -972,8 +999,7 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
 {
   assert(n == numUnknowns);
   assert(m == numConstraints);
-  
-  
+  printUnknowns(x);
   
   if (values == NULL) {
     /* return the structure of the jacobian */
@@ -1037,6 +1063,7 @@ Bool eval_jac_g(Index n, Number *x, Bool new_x,
       }
       std::cout << std::endl;
     }
+    std::cout << std::endl;
   }
   
   return TRUE;

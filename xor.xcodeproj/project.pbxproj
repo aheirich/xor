@@ -35,7 +35,7 @@
 		4D02B16F1FCE5B0F00A074A1 /* xor */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = xor; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D02B1791FCE5B3A00A074A1 /* xor-keras.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = "xor-keras.py"; sourceTree = "<group>"; };
 		4D02B17A1FCE5B3A00A074A1 /* network.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = network.py; sourceTree = "<group>"; };
-		4D0C422E201B05C7000D7C2F /* xor_relu_forward_activation.log.save */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = xor_relu_forward_activation.log.save; sourceTree = "<group>"; };
+		4D158B59204CB0EC003580BF /* log2gnuplot.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = log2gnuplot.py; sourceTree = "<group>"; };
 		4D2AFE9C2048C8E5007775BB /* xor_ini1.dat */ = {isa = PBXFileReference; lastKnownFileType = text; path = xor_ini1.dat; sourceTree = "<group>"; };
 		4D5742E02048699F00187A52 /* xor_ampl.mod */ = {isa = PBXFileReference; lastKnownFileType = text; path = xor_ampl.mod; sourceTree = "<group>"; };
 		4D5742E120487FE500187A52 /* xor_ampl.dat */ = {isa = PBXFileReference; lastKnownFileType = text; path = xor_ampl.dat; sourceTree = "<group>"; };
@@ -46,6 +46,8 @@
 		4D9DE5802017AF7C005B32E9 /* xor_relu_forward_activation.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = xor_relu_forward_activation.py; sourceTree = "<group>"; };
 		4DA2A44220019DEF00FA3C9E /* xor_sigmoid_inverse.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = xor_sigmoid_inverse.py; sourceTree = "<group>"; };
 		4DA33F312017E36C0039D692 /* xor_relu_inverse_ipopt_verification.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = xor_relu_inverse_ipopt_verification.py; sourceTree = "<group>"; };
+		4DF18301204B5D190062B0A5 /* random_start.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = random_start.py; sourceTree = "<group>"; };
+		4DF18302204B75DC0062B0A5 /* init */ = {isa = PBXFileReference; lastKnownFileType = folder; path = init; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -86,7 +88,7 @@
 		4D02B1711FCE5B0F00A074A1 /* xor */ = {
 			isa = PBXGroup;
 			children = (
-				4D0C422E201B05C7000D7C2F /* xor_relu_forward_activation.log.save */,
+				4DF18302204B75DC0062B0A5 /* init */,
 				4D9DE5802017AF7C005B32E9 /* xor_relu_forward_activation.py */,
 				4DA33F312017E36C0039D692 /* xor_relu_inverse_ipopt_verification.py */,
 				4D620FB72012BF7200434DFD /* xor_relu_inverse_ipopt.cpp */,
@@ -98,6 +100,8 @@
 				4D2AFE9C2048C8E5007775BB /* xor_ini1.dat */,
 				4D5742E120487FE500187A52 /* xor_ampl.dat */,
 				4D9DE57E20130900005B32E9 /* Makefile */,
+				4DF18301204B5D190062B0A5 /* random_start.py */,
+				4D158B59204CB0EC003580BF /* log2gnuplot.py */,
 			);
 			path = xor;
 			sourceTree = "<group>";
